@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+     {
+      "item": "rotp_nextalbum:revolver_casing"
+    }
+  ],
+  "result": {
+    "item": "minecraft:iron_nugget"
+  }
+}

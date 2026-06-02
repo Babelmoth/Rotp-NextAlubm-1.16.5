@@ -1,0 +1,225 @@
+{
+  "sex_pistols_summon": {
+    "sounds": [
+      "rotp_nextalbum:stand/sex_pistols_summon_1"
+    ]
+  },
+  "sex_pistols_unsummon": {
+    "sounds": [
+      "rotp_nextalbum:stand/sex_pistols_unsummon"
+    ]
+  },
+  "sex_pistols_ricochet": {
+    "sounds": [
+      "rotp_nextalbum:stand/sex_pistols_pass"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.sex_pistols_pass"
+  },
+  "sex_pistols_ricochet_yari": {
+    "sounds": [
+      "rotp_nextalbum:stand/sex_pistols_yari"
+    ]
+  },
+  "sex_pistols_ricochet_yorodomo": {
+    "sounds": [
+      "rotp_nextalbum:stand/sex_pistols_yorodomo"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.sex_pistols_ricochet_yorodomo"
+  },
+  "sex_pistols_ricochet_hit": {
+    "sounds": [
+      "rotp_nextalbum:stand/sex_pistols_yada"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.sex_pistols_ricochet_hit_yada"
+  },
+  "sex_pistols_ricochet_hit_yaho": {
+    "sounds": [
+      "rotp_nextalbum:stand/sex_pistols_yaho"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.sex_pistols_ricochet_hit_yaho"
+  },
+  "sex_pistols_ricochet_hit_ye": {
+    "sounds": [
+      "rotp_nextalbum:stand/sex_pistols_ye"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.sex_pistols_ricochet_hit_ye"
+  },
+  "sex_pistols_hungry": {
+    "sounds": [
+      "rotp_nextalbum:stand/sex_pistols_hungry_1"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.sex_pistols_hungry"
+  },
+  "sex_pistols_hungry_2": {
+    "sounds": [
+      "rotp_nextalbum:stand/sex_pistols_hungry_2"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.sex_pistols_hungry_2"
+  },
+  "mista_sex_pistols": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/mista_sex_pistols_1"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.mista_sex_pistols"
+  },
+  "mista_pistols": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/mista_pistols_1"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.mista_pistols"
+  },
+  "mista_recall": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/mista_callback_1"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.mista_recall"
+  },
+  "mista_recall_2": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/mista_callback_2"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.mista_recall_2"
+  },
+  "mista_loaded_fire": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/mista_gonna_light_you_up"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.mista_gonna_light_you_up"
+  },
+  "mista_loaded_fire_kurai": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/mista_kurai"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.mista_kurai"
+  },
+  "mista_loaded_fire_sokoda": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/mista_sokoda"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.mista_sokoda"
+  },
+  "mista_loaded_fire_yik": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/mista_yik"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.mista_yik"
+  },
+  "mista_stand_reload": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/mista_time_to_work"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.mista_time_to_work"
+  },
+  "revolver_open": {
+    "sounds": ["rotp_nextalbum:item/revolver/revolver_open"],
+    "subtitle": "rotp_nextalbum.subtitle.revolver_open"
+  },
+  "revolver_close": {
+    "sounds": ["rotp_nextalbum:item/revolver/revolver_close"],
+    "subtitle": "rotp_nextalbum.subtitle.revolver_close"
+  },
+  "revolver_shellsout": {
+    "sounds": ["rotp_nextalbum:item/revolver/revolver_shellsout"],
+    "subtitle": "rotp_nextalbum.subtitle.revolver_shellsout"
+  },
+  "revolver_speedloader": {
+    "sounds": ["rotp_nextalbum:item/revolver/revolver_speedloader"],
+    "subtitle": "rotp_nextalbum.subtitle.revolver_speedloader"
+  },
+  "fire": {
+    "sounds": ["rotp_nextalbum:item/revolver/fire"],
+    "subtitle": "rotp_nextalbum.subtitle.fire"
+  },
+  "dry_fire": {
+    "sounds": ["rotp_nextalbum:item/revolver/dry_fire"],
+    "subtitle": "rotp_nextalbum.subtitle.dry_fire"
+  },
+  "shell_casting_1": {
+    "sounds": ["rotp_nextalbum:item/revolver/shell_casting_1"],
+    "subtitle": "rotp_nextalbum.subtitle.shell_casting"
+  },
+  "shell_casting_2": {
+    "sounds": ["rotp_nextalbum:item/revolver/shell_casting_2"],
+    "subtitle": "rotp_nextalbum.subtitle.shell_casting"
+  },
+  "shell_casting_3": {
+    "sounds": ["rotp_nextalbum:item/revolver/shell_casting_3"],
+    "subtitle": "rotp_nextalbum.subtitle.shell_casting"
+  },
+  "shell_casting_4": {
+    "sounds": ["rotp_nextalbum:item/revolver/shell_casting_4"],
+    "subtitle": "rotp_nextalbum.subtitle.shell_casting"
+  },
+  "sex_pistols_ost_30": {
+    "sounds": [
+      {
+        "name": "rotp_nextalbum:sex_pistols_ost_full",
+        "type": "event"
+      }
+    ]
+  },
+  "sex_pistols_ost_60": {
+    "sounds": [
+      {
+        "name": "rotp_nextalbum:sex_pistols_ost_full",
+        "type": "event"
+      }
+    ]
+  },
+  "sex_pistols_ost_75": {
+    "sounds": [
+      {
+        "name": "rotp_nextalbum:sex_pistols_ost_full",
+        "type": "event"
+      }
+    ]
+  },
+  "sex_pistols_ost_90": {
+    "sounds": [
+      {
+        "name": "rotp_nextalbum:sex_pistols_ost_full",
+        "type": "event"
+      }
+    ]
+  },
+  "sex_pistols_ost_120": {
+    "sounds": [
+      {
+        "name": "rotp_nextalbum:sex_pistols_ost_full",
+        "type": "event"
+      }
+    ]
+  },
+  "sex_pistols_ost_full": {
+    "sounds": [
+      {
+        "name": "rotp_nextalbum:ost/full/ilventodoro",
+        "stream": true
+      },
+      {
+        "name": "rotp_nextalbum:ost/full/proiettile",
+        "stream": true
+      }
+    ]
+  },
+  "sex_pistols_ost_cassette": {
+    "sounds": [
+      {
+        "name": "rotp_nextalbum:sex_pistols_ost_full",
+        "type": "event"
+      }
+    ]
+  },
+  "the_grateful_dead": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/the_grateful_dead"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.the_grateful_dead"
+  },
+  "grateful_dead": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/grateful_dead"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.grateful_dead"
+  }
+}

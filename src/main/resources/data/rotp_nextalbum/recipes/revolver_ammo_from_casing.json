@@ -1,0 +1,24 @@
+{
+  "type": "jojo:crafting_shaped_stand",
+  "pattern": [
+    "b",
+    "a"
+  ],
+  "key": {
+     "a":{
+      "item": "rotp_nextalbum:revolver_casing"
+    },
+     "b":{
+      "tag": "forge:nuggets/iron"
+    }
+  },
+  "stand": [
+    {
+      "name": "rotp_nextalbum:sex_pistols"
+    }
+  ],
+  "result": {
+    "item": "rotp_nextalbum:revolver_ammo",
+    "count": 1
+  }
+}

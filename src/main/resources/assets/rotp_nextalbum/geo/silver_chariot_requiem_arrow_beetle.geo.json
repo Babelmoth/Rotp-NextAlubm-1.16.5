@@ -1,0 +1,308 @@
+{
+  "format_version": "1.12.0",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.SCR",
+        "texture_width": 16,
+        "texture_height": 16,
+        "visible_bounds_width": 3,
+        "visible_bounds_height": 3.5,
+        "visible_bounds_offset": [
+          0,
+          1.25,
+          0
+        ]
+      },
+      "bones": [
+        {
+          "name": "body",
+          "pivot": [
+            0,
+            24,
+            0
+          ]
+        },
+        {
+          "name": "upperPart",
+          "parent": "body",
+          "pivot": [
+            0,
+            12,
+            0
+          ]
+        },
+        {
+          "name": "torso",
+          "parent": "upperPart",
+          "pivot": [
+            -0.03878,
+            14.28612,
+            -0.38437
+          ]
+        },
+        {
+          "name": "leftArm",
+          "parent": "upperPart",
+          "pivot": [
+            5,
+            23,
+            0
+          ]
+        },
+        {
+          "name": "leftArmJoint",
+          "parent": "leftArm",
+          "pivot": [
+            6,
+            18,
+            0
+          ]
+        },
+        {
+          "name": "leftForeArm",
+          "parent": "leftArm",
+          "pivot": [
+            6,
+            18,
+            0
+          ]
+        },
+        {
+          "name": "leftshoulder",
+          "parent": "leftArm",
+          "pivot": [
+            7.4,
+            21.5,
+            1.2
+          ]
+        },
+        {
+          "name": "rightArm",
+          "parent": "upperPart",
+          "pivot": [
+            -5,
+            24,
+            0
+          ]
+        },
+        {
+          "name": "rightArmJoint",
+          "parent": "rightArm",
+          "pivot": [
+            -6,
+            18,
+            0
+          ]
+        },
+        {
+          "name": "rightForeArm",
+          "parent": "rightArm",
+          "pivot": [
+            -6,
+            18,
+            0
+          ]
+        },
+        {
+          "name": "bone2",
+          "parent": "rightForeArm",
+          "pivot": [
+            -5,
+            11.1,
+            -2
+          ]
+        },
+        {
+          "name": "bone3",
+          "parent": "rightForeArm",
+          "pivot": [
+            -5,
+            17,
+            -2
+          ]
+        },
+        {
+          "name": "bone",
+          "parent": "rightForeArm",
+          "pivot": [
+            -5.3,
+            14.78875,
+            -0.42884
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -5.3,
+                8,
+                -5
+              ],
+              "size": [
+                0,
+                10,
+                10
+              ],
+              "pivot": [
+                -6.3,
+                8,
+                -4
+              ],
+              "rotation": [
+                42.5,
+                0,
+                0
+              ],
+              "uv": {
+                "north": {
+                  "uv": [
+                    0,
+                    0
+                  ],
+                  "uv_size": [
+                    0,
+                    16
+                  ]
+                },
+                "east": {
+                  "uv": [
+                    0,
+                    0
+                  ],
+                  "uv_size": [
+                    16,
+                    16
+                  ]
+                },
+                "south": {
+                  "uv": [
+                    16,
+                    0
+                  ],
+                  "uv_size": [
+                    0,
+                    16
+                  ]
+                },
+                "west": {
+                  "uv": [
+                    16,
+                    0
+                  ],
+                  "uv_size": [
+                    -16,
+                    16
+                  ]
+                },
+                "up": {
+                  "uv": [
+                    0,
+                    0
+                  ],
+                  "uv_size": [
+                    16,
+                    0
+                  ]
+                },
+                "down": {
+                  "uv": [
+                    0,
+                    16
+                  ],
+                  "uv_size": [
+                    16,
+                    0
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "rightshoulder",
+          "parent": "rightArm",
+          "pivot": [
+            -7.4,
+            21.5,
+            1.2
+          ]
+        },
+        {
+          "name": "leftLeg",
+          "parent": "body",
+          "pivot": [
+            1.9,
+            12,
+            0
+          ]
+        },
+        {
+          "name": "leftLegJoint",
+          "parent": "leftLeg",
+          "pivot": [
+            1.9,
+            6,
+            0
+          ]
+        },
+        {
+          "name": "leftLowerLeg",
+          "parent": "leftLeg",
+          "pivot": [
+            1.9,
+            6,
+            0
+          ]
+        },
+        {
+          "name": "rightLeg",
+          "parent": "body",
+          "pivot": [
+            -1.9,
+            12,
+            0
+          ]
+        },
+        {
+          "name": "rightLegJoint",
+          "parent": "rightLeg",
+          "pivot": [
+            -1.9,
+            6,
+            0
+          ]
+        },
+        {
+          "name": "rightLowerLeg",
+          "parent": "rightLeg",
+          "pivot": [
+            -1.9,
+            6,
+            0
+          ]
+        },
+        {
+          "name": "head",
+          "pivot": [
+            0,
+            25,
+            0
+          ]
+        },
+        {
+          "name": "hat",
+          "parent": "head",
+          "pivot": [
+            0,
+            30.31615,
+            -0.17452
+          ],
+          "rotation": [
+            2.98483,
+            -0.34834,
+            2.98788
+          ]
+        }
+      ]
+    }
+  ]
+}

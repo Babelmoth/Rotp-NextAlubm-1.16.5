@@ -1,0 +1,33 @@
+{
+  "type": "jojo:crafting_shaped_stand",
+  "pattern": [
+    "ebb",
+    "cdc",
+    "aac"
+  ],
+  "key": {
+     "a":{
+      "item": "minecraft:leather"
+    },
+     "b":{
+      "tag": "forge:nuggets/iron"
+    },
+     "c":{
+      "tag": "forge:ingots/iron"
+    },
+     "d":{
+      "tag": "forge:storage_blocks/iron"
+    },
+     "e":{
+      "tag": "forge:dyes/purple"
+    }
+  },
+  "stand": [
+    {
+      "name": "rotp_nextalbum:sex_pistols"
+    }
+  ],
+  "result": {
+    "item": "rotp_nextalbum:revolver"
+  }
+}

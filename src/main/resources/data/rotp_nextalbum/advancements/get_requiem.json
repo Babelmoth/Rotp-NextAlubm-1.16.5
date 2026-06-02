@@ -1,0 +1,23 @@
+{
+  "parent": "jojo:jojo/summon_stand",
+  "display": {
+    "icon": {
+      "item": "jojo:stand_arrow_beetle"
+    },
+    "title": {
+      "translate": "advancements.rotp_nextalbum.get_requiem.title"
+    },
+    "description": {
+      "translate": "advancements.rotp_nextalbum.get_requiem.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "enchant_spear": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

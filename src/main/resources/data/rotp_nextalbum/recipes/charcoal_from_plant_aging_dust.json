@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "aa",
+    "aa"
+  ],
+  "key": {
+    "a": {
+      "item": "rotp_nextalbum:plant_aging_dust"
+    }
+  },
+  "result": {
+    "item": "minecraft:charcoal"
+  }
+}

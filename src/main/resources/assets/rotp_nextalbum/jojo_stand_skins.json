@@ -1,0 +1,16 @@
+{
+  "skins": {
+    "rotp_nextalbum:manga": {
+      "stand_type": "rotp_nextalbum:sex_pistols",
+      "color": "0xf7d848"
+    },
+    "rotp_nextalbum:pale": {
+      "stand_type": "rotp_nextalbum:sex_pistols",
+      "color": "0xc7f4f0"
+    },
+    "rotp_nextalbum:mista_hat": {
+      "stand_type": "rotp_nextalbum:sex_pistols",
+      "color": "0xe75d2f"
+    }
+  }
+}

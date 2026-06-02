@@ -1,0 +1,23 @@
+{
+  "parent": "jojo:jojo/summon_stand",
+  "display": {
+    "icon": {
+      "item": "rotp_nextalbum:four_attack_icon"
+    },
+    "title": {
+      "translate": "advancements.rotp_nextalbum.four_attack.title"
+    },
+    "description": {
+      "translate": "advancements.rotp_nextalbum.four_attack.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "four_attack": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " b ",
+    "cac",
+    " c "
+  ],
+  "key": {
+     "a":{
+      "item": "jojo:aja_stone"
+    },
+     "b":{
+      "item": "minecraft:iron_sword"
+    },
+     "c":{
+      "tag": "forge:ingots/gold"
+    }
+  },
+  "result": {
+    "item": "rotp_nextalbum:luck_pluck"
+  }
+}

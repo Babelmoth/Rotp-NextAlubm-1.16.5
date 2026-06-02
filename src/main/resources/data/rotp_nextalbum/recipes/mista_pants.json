@@ -1,0 +1,27 @@
+{
+  "type": "jojo:crafting_shaped_stand",
+  "pattern": [
+    "aaa",
+    "aba",
+    "aca"
+  ],
+  "key": {
+    "a": {
+      "item": "minecraft:leather"
+    },
+     "b":{
+      "tag": "forge:dyes/blue"
+    },
+     "c":{
+      "tag": "forge:dyes/red"
+    }
+  },
+  "stand": [
+    {
+      "name": "rotp_nextalbum:sex_pistols"
+    }
+  ],
+  "result": {
+    "item": "rotp_nextalbum:mista_suit_pants"
+  }
+}
