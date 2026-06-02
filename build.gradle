@@ -216,7 +216,7 @@ jar {
         attributes([
             "Specification-Title": "RotP_Next_Album",
             "Specification-Vendor": "RotP_BCBabelmoth",
-            "Specification-Version": "0.1", // We are version 1 of ourselves
+            "Specification-Version": "1",
             "Implementation-Title": project.name,
             "Implementation-Version": "${version}",
             "Implementation-Vendor" :"RotP_BCBabelmoth",

@@ -90,7 +90,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     private static final DataParameter<Boolean> DATA_SPLITTING_SHOT_BULLET = EntityDataManager.defineId(RevolverBulletEntity.class, DataSerializers.BOOLEAN);
     private static final DataParameter<String> DATA_SEX_PISTOLS_STAND_SKIN = EntityDataManager.defineId(RevolverBulletEntity.class, DataSerializers.STRING);
     private static final Random RANDOM = new Random();
-    
+
     private static final int MAX_LIFETIME_TICKS = 120;
     private static final int MAX_RICOCHETS = 2;
     private static final long BLOCK_DAMAGE_MEMORY_TICKS = 100L;
@@ -110,7 +110,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     private static final int FULL_SEX_PISTOLS_MASK = 63;
     private static final int AUTO_REDIRECT_INTERVAL = 6;
     private static final double FAR_UNLOADED_REMOVE_DISTANCE_SQR = 96.0D * 96.0D;
-    private static final double ABSOLUTE_REMOVE_DISTANCE_SQR = 192.0D * 192.0
+    private static final double ABSOLUTE_REMOVE_DISTANCE_SQR = 192.0D * 192.0;
 
     private static final int SEX_PISTOLS_STAND_COLOR = 0xe75d2f;
 

@@ -66,7 +66,7 @@ public class InitStands {
             () -> new SexPistolsTrajectoryVisionAction(new StandAction.Builder()));
     public static final RegistryObject<SexPistolsTargetModeAction> SEX_PISTOLS_TARGET_MODE = ACTIONS.register("sex_pistols_target_mode",
             () -> new SexPistolsTargetModeAction(new StandAction.Builder()
-                                .resolveLevelToUnlock(0)
+                                .resolveLevelToUnlock(2)
                                 .cooldown(4)));
     public static final RegistryObject<SexPistolsTransferOrderAction> SEX_PISTOLS_TRANSFER_ORDER = ACTIONS.register("sex_pistols_transfer_order",
             () -> new SexPistolsTransferOrderAction(new StandAction.Builder()
@@ -78,7 +78,7 @@ public class InitStands {
                                 .cooldown(0), false));
     public static final RegistryObject<SexPistolsStandReloadAction> SEX_PISTOLS_QUICK_RELOAD = ACTIONS.register("sex_pistols_quick_reload",
             () -> new SexPistolsStandReloadAction(new StandAction.Builder()
-                                .resolveLevelToUnlock(0)
+                                .resolveLevelToUnlock(1)
                                 .cooldown(40)
                                 .shiftVariationOf(SEX_PISTOLS_STAND_RELOAD), true));
     public static final RegistryObject<SexPistolsEncirclementAction> SEX_PISTOLS_ENCIRCLEMENT = ACTIONS.register("sex_pistols_encirclement",
@@ -171,9 +171,9 @@ public class InitStands {
                     .storyPartName(StoryPart.GOLDEN_WIND.getName())
                     .leftClickHotbar(
                             SEX_PISTOLS_STAND_RELOAD.get(),
-                            SEX_PISTOLS_ENCIRCLEMENT.get(),
                             SEX_PISTOLS_PIERCING_SHOT.get(),
-                            SEX_PISTOLS_SPLITTING_SHOT.get())
+                            SEX_PISTOLS_SPLITTING_SHOT.get(),
+                            SEX_PISTOLS_ENCIRCLEMENT.get())
                     .rightClickHotbar(
                             SEX_PISTOLS_TARGET_MODE.get(),
                             SEX_PISTOLS_TRANSFER_ORDER.get(),
