@@ -1,0 +1,85 @@
+{
+  "parent": "jojo:jojo/summon_stand",
+  "criteria": {
+    "has_mista_boots": {
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "rotp_nextalbum:mista_suit_boots"
+            ]
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_mista_hat": {
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "rotp_nextalbum:mista_suit_hat"
+            ]
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_mista_pants": {
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "rotp_nextalbum:mista_suit_pants"
+            ]
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_mista_cloth": {
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "rotp_nextalbum:mista_suit_cloth"
+            ]
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "translate": "advancements.rotp_nextalbum.full_mista_suit.description"
+    },
+    "frame": "task",
+    "hidden": false,
+    "icon": {
+      "item": "rotp_nextalbum:mista_suit_cloth"
+    },
+    "show_toast": true,
+    "title": {
+      "translate": "advancements.rotp_nextalbum.full_mista_suit.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_mista_hat"
+    ],
+    [
+      "has_mista_cloth"
+    ],
+    [
+      "has_mista_pants"
+    ],
+    [
+      "has_mista_boots"
+    ]
+  ],
+  "rewards": {
+    "experience": 200
+  }
+}

@@ -33,7 +33,6 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.server.ServerWorld;
 
-/** Contact effects for blocks that have reached full ageing. */
 public final class AgedBlockContactHandler {
 
     private static final int FULL_PLANT_SCAN_RADIUS = 2;

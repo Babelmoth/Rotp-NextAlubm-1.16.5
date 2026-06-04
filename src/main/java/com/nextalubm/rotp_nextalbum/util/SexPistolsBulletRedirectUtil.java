@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.github.standobyte.jojo.entity.stand.StandEntity;
+import com.nextalubm.rotp_nextalbum.NextAlbumConfig;
 import com.nextalubm.rotp_nextalbum.entity.SexPistolsEntity;
 
 import net.minecraft.entity.Entity;
@@ -18,16 +19,21 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 
 public final class SexPistolsBulletRedirectUtil {
-    public static final double TARGET_SEARCH_RANGE = 32.0D;
-    public static final double ASSIST_SEARCH_RANGE = 18.0D;
+
+    public static final double TARGET_SEARCH_RANGE =  NextAlbumConfig.getCommonConfigInstance(false).sexPistolsTargetSearchRange.get().floatValue();
+    public static final double ASSIST_SEARCH_RANGE =  NextAlbumConfig.getCommonConfigInstance(false).sexPistolsTransferAssistRange.get().floatValue();
+
     public static final double STAND_HIT_RADIUS = 0.75D;
     public static final double EXIT_OFFSET = 0.35D;
+
     public static final double SPEED_SCALE = 1.0D;
     public static final double SCOUT_RANGE = 18.0D;
     public static final double SCOUT_WIDTH = 4.0D;
     private static final double MIN_SPEED = 0.25D;
+
     private static final double PATH_OBSTRUCTION_PENALTY = 72.0D;
     private static final double RICOCHET_PENALTY = 18.0D;
+    
     private static final double STAND_DEFENSE_INTERCEPT_PENALTY = 360.0D;
     private static final double STAND_DEFENSE_NEAR_PATH_PENALTY = 150.0D;
     private static final double STAND_DEFENSE_TARGET_GUARD_PENALTY = 120.0D;

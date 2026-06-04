@@ -13,6 +13,7 @@ import com.github.standobyte.jojo.entity.stand.StandEntityType;
 import com.github.standobyte.jojo.entity.stand.StandRelativeOffset;
 import com.github.standobyte.jojo.network.PacketManager;
 import com.github.standobyte.jojo.network.packets.fromserver.TrSetStandEntityPacket;
+import com.nextalubm.rotp_nextalbum.NextAlbumConfig;
 import com.nextalubm.rotp_nextalbum.entity.SexPistolsEntity;
 import com.nextalubm.rotp_nextalbum.init.InitStandEffects;
 import com.nextalubm.rotp_nextalbum.init.InitStands;
@@ -27,7 +28,7 @@ import net.minecraft.util.math.vector.Vector3d;
 
 public class SexPistolsEntities extends StandEffectInstance {
     private static final int PISTOL_COUNT = 6;
-    private static final int REVIVE_TICKS = 1200;
+    private static final int REVIVE_TICKS = NextAlbumConfig.getCommonConfigInstance(false).sexPistolsReviveTicks.get().intValue();
     private static final int HUNGER_MIN_TICKS = 20 * 60 * 5;
     private static final int HUNGER_EXTRA_TICKS = 20 * 60 * 5;
     private static final Random RANDOM = new Random();

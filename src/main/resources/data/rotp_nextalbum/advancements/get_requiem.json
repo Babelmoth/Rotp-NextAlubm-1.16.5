@@ -16,7 +16,7 @@
     "hidden": true
   },
   "criteria": {
-    "enchant_spear": {
+    "get_requiem": {
       "trigger": "minecraft:impossible"
     }
   }

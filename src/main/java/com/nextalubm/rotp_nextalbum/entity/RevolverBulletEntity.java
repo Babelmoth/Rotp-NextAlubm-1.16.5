@@ -43,6 +43,7 @@ import com.nextalubm.rotp_nextalbum.util.SexPistolsTransferOrder;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsSoundUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsStaminaUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsResolveUtil;
+import com.nextalubm.rotp_nextalbum.NextAlbumConfig;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -92,8 +93,8 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     private static final Random RANDOM = new Random();
 
     private static final int MAX_LIFETIME_TICKS = 120;
-    private static final int MAX_RICOCHETS = 2;
-    private static final long BLOCK_DAMAGE_MEMORY_TICKS = 100L;
+    private static final int MAX_RICOCHETS = NextAlbumConfig.getCommonConfigInstance(false).maxRicochetCount.get().intValue();
+    private static final long BLOCK_DAMAGE_MEMORY_TICKS =  NextAlbumConfig.getCommonConfigInstance(false).blockDamageMemoryTicks.get().intValue();
     private static final double GRAVITY_COMPENSATION = 0.032D;
     private static final double RICOCHET_MIN_SPEED_SQR = 0.04D;
     private static final double RICOCHET_SURFACE_OFFSET = 0.18D;
@@ -115,18 +116,18 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     private static final int SEX_PISTOLS_STAND_COLOR = 0xe75d2f;
 
     private static final double CRITICAL_KICK_SPEED_SCALE = 1.15D;
-    private static final double CLOSE_DAMAGE_DROP_DISTANCE = 5.0D;
-    private static final double STABLE_DAMAGE_END_DISTANCE = 50.0D;
-    private static final double CLOSE_DAMAGE = 10.0D;
-    private static final double STABLE_DAMAGE = 5.0D;
-    private static final double MIN_DISTANCE_DAMAGE = 1.0D;
+    private static final double CLOSE_DAMAGE_DROP_DISTANCE =  NextAlbumConfig.getCommonConfigInstance(false).closeDamageDropDistance.get().floatValue();
+    private static final double STABLE_DAMAGE_END_DISTANCE =  NextAlbumConfig.getCommonConfigInstance(false).stableDamageEndDistance.get().floatValue();
+    private static final float CLOSE_DAMAGE = 10.0F * NextAlbumConfig.getCommonConfigInstance(false).bulletDamageMultiplier.get().floatValue();
+    private static final float STABLE_DAMAGE = 5.0F * NextAlbumConfig.getCommonConfigInstance(false).bulletDamageMultiplier.get().floatValue();
+    private static final double MIN_DISTANCE_DAMAGE =  NextAlbumConfig.getCommonConfigInstance(false).minDistanceDamage.get().floatValue();
     private static final double FAR_DAMAGE_DROP_RATE = 0.28D;
 
     private static final int ENCIRCLEMENT_DURATION_TICKS = 40;
     private static final int ENCIRCLEMENT_DAMAGE_INTERVAL = 8;
     private static final double ENCIRCLEMENT_RADIUS = 3.2D;
-    private static final float ENCIRCLEMENT_DAMAGE = 0.75F;
-    private static final float ENCIRCLEMENT_FINISH_DAMAGE = 3.0F;
+    private static final float ENCIRCLEMENT_DAMAGE = 0.75F * NextAlbumConfig.getCommonConfigInstance(false).bulletDamageMultiplier.get().floatValue();
+    private static final float ENCIRCLEMENT_FINISH_DAMAGE = 3.0F * NextAlbumConfig.getCommonConfigInstance(false).bulletDamageMultiplier.get().floatValue();
     private static final double ENCIRCLEMENT_KICK_SPEED = 4.2D;
     private static final double ENCIRCLEMENT_STAND_HIT_DISTANCE_SQR = 0.85D * 0.85D;
     private static final double ENCIRCLEMENT_DAMAGE_TRACE_RADIUS = 0.85D;
@@ -135,7 +136,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
 
     private static final int PIERCING_SHOT_MAX_LIFETIME_TICKS = 80;
     private static final int PIERCING_SHOT_MAX_BLOCKS = 4;
-    private static final float PIERCING_SHOT_DAMAGE = 8.0F;
+    private static final float PIERCING_SHOT_DAMAGE = 8.0F * NextAlbumConfig.getCommonConfigInstance(false).bulletDamageMultiplier.get().floatValue();
     private static final float PIERCING_SHOT_CRITICAL_DAMAGE_MULTIPLIER = 1.45F;
     private static final float PIERCING_SHOT_KNOCKBACK = 1.5F;
     private static final float PIERCING_SHOT_COLLAPSE_THRESHOLD = 0.8F;
@@ -148,7 +149,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     private static final int SPLITTING_FRAGMENT_MAX_COUNT = 5;
     private static final int SPLITTING_FRAGMENT_RESOLVE_MIN_COUNT = 4;
     private static final int SPLITTING_FRAGMENT_RESOLVE_MAX_COUNT = 6;
-    private static final float SPLITTING_FRAGMENT_DAMAGE = 3.0F;
+    private static final float SPLITTING_FRAGMENT_DAMAGE = 3.0F * NextAlbumConfig.getCommonConfigInstance(false).bulletDamageMultiplier.get().floatValue();
     private static final int SPLITTING_SHOT_BLEEDING_DURATION_TICKS = 100;
     private static final float SPLITTING_SHOT_BLEEDING_CHANCE = 0.35F;
     private static final float SPLITTING_SHOT_RESOLVE_BLEEDING_CHANCE = 0.70F;
@@ -641,7 +642,10 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         }
         playImpactEffects(serverWorld, pos, state);
         float hardness = state.getDestroySpeed(level, pos);
-        if (hardness >= 0.0F && hardness <= PIERCING_SHOT_BLOCK_HARDNESS && state.getMaterial() != Material.BARRIER && !isAlwaysRicochetBlock(state) && piercingShotBlocksPierced < PIERCING_SHOT_MAX_BLOCKS) {
+
+        boolean canDestroyBlocks = NextAlbumConfig.getCommonConfig(false).isBulletDestroyedBlocks.get();
+
+        if (canDestroyBlocks && hardness >= 0.0F && hardness <= PIERCING_SHOT_BLOCK_HARDNESS && state.getMaterial() != Material.BARRIER && !isAlwaysRicochetBlock(state) && piercingShotBlocksPierced < PIERCING_SHOT_MAX_BLOCKS) {
             serverWorld.destroyBlock(pos, true);
             piercingShotBlocksPierced++;
             Vector3d direction = motion.lengthSqr() > 1.0E-6D ? motion.normalize() : Vector3d.atLowerCornerOf(result.getDirection().getNormal()).reverse();
@@ -654,6 +658,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
             playSound(SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, 0.35F, 1.2F + RANDOM.nextFloat() * 0.15F);
             return true;
         }
+
         spawnBulletHole(serverWorld, result.getDirection(), pos, result.getLocation());
         playSound(SoundEvents.STONE_HIT, 0.35F, 0.8F + RANDOM.nextFloat() * 0.2F);
         remove();
@@ -1682,7 +1687,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
             double farDistance = bulletTravelDistance - STABLE_DAMAGE_END_DISTANCE;
             damage = MIN_DISTANCE_DAMAGE + (STABLE_DAMAGE - MIN_DISTANCE_DAMAGE) * Math.exp(-farDistance * FAR_DAMAGE_DROP_RATE);
         }
-        return (float) MathHelper.clamp(damage, MIN_DISTANCE_DAMAGE, getBaseDamage());
+        return (float) MathHelper.clamp(damage, MIN_DISTANCE_DAMAGE, CLOSE_DAMAGE);
     }
 
     private boolean isEffectiveActualDamage(LivingEntity target, float actualDamage, float baseDamage) {
@@ -2248,6 +2253,17 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         playImpactEffects(serverWorld, pos, state);
 
         ImpactTier impactTier = classifyImpact(state, hardness);
+
+        // ================= 新增逻辑开始 =================
+        // 读取 Config：是否允许破坏方块
+        boolean canDestroyBlocks = NextAlbumConfig.getCommonConfig(false).isBulletDestroyedBlocks.get();
+
+        // 如果 Config 设为 false，将易碎和柔软材质强制视为坚硬表面，防止破坏方块
+        if (!canDestroyBlocks && (impactTier == ImpactTier.FRAGILE_BREAK || impactTier == ImpactTier.SOFT_BREAK)) {
+            impactTier = ImpactTier.HARD_SURFACE;
+        }
+        // ================= 新增逻辑结束 =================
+
         if (impactTier == ImpactTier.FRAGILE_BREAK) {
             clearBlockDamage(serverWorld, pos);
             serverWorld.destroyBlock(pos, true);

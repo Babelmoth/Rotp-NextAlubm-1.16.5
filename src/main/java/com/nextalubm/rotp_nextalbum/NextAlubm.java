@@ -11,6 +11,10 @@ import com.nextalubm.rotp_nextalbum.init.InitSounds;
 import com.nextalubm.rotp_nextalbum.init.InitStandEffects;
 import com.nextalubm.rotp_nextalbum.init.InitStands;
 import com.nextalubm.rotp_nextalbum.network.NetworkHandler;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -23,6 +27,7 @@ public class NextAlubm {
     public static final Logger LOGGER = LogManager.getLogger();
 
     public NextAlubm() {
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,NextAlbumConfig.commonSpec);
         GeckoLib.initialize();
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         NetworkHandler.init();
@@ -34,5 +39,13 @@ public class NextAlubm {
         InitStandEffects.STAND_EFFECTS.register(modEventBus);
         InitStands.ACTIONS.register(modEventBus);
         InitStands.STANDS.register(modEventBus);
+    }
+
+
+
+    private void doClientStuff(final FMLClientSetupEvent event){
+    }
+    public static Logger getLogger() {
+        return LOGGER;
     }
 }

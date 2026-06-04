@@ -129,7 +129,7 @@ public class InitStands {
             () -> new TheGratefulDeadRemoveAgingAction(new StandAction.Builder().cooldown(40)));
 
 
-///---------------------------------------- Sex Pistols Entities -------------------------------------------------------------------------
+///---------------------------------------- Stand Entities -------------------------------------------------------------------------
 
     public static final RegistryObject<StandEntityType<? extends SexPistolsEntity>> SEX_PISTOLS_1 = InitEntities.ENTITIES.register("sex_pistols_1",
             () -> new StandEntityType<SexPistolsEntity>(SexPistolsEntity::new, 0.35F, 0.7F)
@@ -145,10 +145,13 @@ public class InitStands {
             () -> new StandEntityType<SexPistolsEntity>(SexPistolsEntity::new, 0.35F, 0.7F));
     public static final RegistryObject<StandEntityType<? extends SexPistolsEntity>> SEX_PISTOLS_7 = InitEntities.ENTITIES.register("sex_pistols_7",
             () -> new StandEntityType<SexPistolsEntity>(SexPistolsEntity::new, 0.35F, 0.7F));
+
     public static final RegistryObject<StandEntityType<? extends SilverChariotRequiemEntity>> SILVER_CHARIOT_REQUIEM_ENTITY = InitEntities.ENTITIES.register("silver_chariot_requiem",
             () -> new StandEntityType<SilverChariotRequiemEntity>(SilverChariotRequiemEntity::new, 0.65F, 1.95F));
+
     public static final RegistryObject<StandEntityType<? extends TheGratefulDeadEntity>> THE_GRATEFUL_DEAD_ENTITY = InitEntities.ENTITIES.register("the_grateful_dead",
             () -> new StandEntityType<TheGratefulDeadEntity>(TheGratefulDeadEntity::new, 0.65F, 1.8F));
+
     public static final RegistryObject<StandEntityType<? extends TheSunEntity>> THE_SUN_ENTITY = InitEntities.ENTITIES.register("the_sun",
             () -> new StandEntityType<TheSunEntity>(TheSunEntity::new, 1.5F, 1.5F));
 
@@ -181,11 +184,11 @@ public class InitStands {
                             SEX_PISTOLS_RECALL.get())
                     .defaultStats(StandStats.class, new StandStats.Builder()
                             .tier(5)
-                            .power(2)
-                            .speed(8)
+                            .power(2, 2)
+                            .speed(8, 14)
                             .range(40, 40)
-                            .durability(16)
-                            .precision(16)
+                            .durability(12, 16)
+                            .precision(16, 20)
                             .build())
                     .addSummonShout(InitSounds.MISTA_SEX_PISTOLS)
                     .addOst(InitSounds.SEX_PISTOLS_OST)));
@@ -225,7 +228,7 @@ public class InitStands {
                             THE_GRATEFUL_DEAD_AGING_AURA.get(),
                             THE_GRATEFUL_DEAD_REMOVE_AGING.get())
                     .defaultStats(NextAlbumStandStats.class, new NextAlbumStandStats.Builder()
-                            .tier(4)
+                            .tier(5)
                             .power(10)
                             .speed(8)
                             .range(10, 10)
@@ -254,6 +257,9 @@ public class InitStands {
                             .randomWeight(0.0D)
                             .build())
                     .setSurvivalGameplayPool(StandSurvivalGameplayPool.OTHER)));
+
+
+                    
     @SubscribeEvent
     public static void createDefaultStandAttributes(EntityAttributeCreationEvent event) {
         for (RegistryObject<StandEntityType<? extends SexPistolsEntity>> entityType : SEX_PISTOLS_ENTITY_TYPES) {

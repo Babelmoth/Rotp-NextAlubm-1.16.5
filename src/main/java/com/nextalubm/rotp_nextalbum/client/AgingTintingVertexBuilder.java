@@ -74,15 +74,10 @@ public class AgingTintingVertexBuilder implements IVertexBuilder {
         float g = clamp01(green / 255F);
         float b = clamp01(blue / 255F);
         float luminance = r * 0.299F + g * 0.587F + b * 0.114F;
-        // Mild desaturation toward grayscale; kept low so the result reads as
-        // a saturated brown-yellow rather than washed-out gray.
         float grayMix = clamp01(0.08F * severity + 0.12F * severity * severity);
         r = mix(r, luminance, grayMix);
         g = mix(g, luminance, grayMix);
         b = mix(b, luminance, grayMix);
-        // Deep tobacco / dry-leather target. Lower base + smaller blue removal
-        // produces a darker brown-yellow at full aging instead of a bright
-        // saffron tint.
         float pallor = clamp01(0.04F + luminance * 0.28F);
         float agedR = clamp01(pallor + 0.22F);
         float agedG = clamp01(pallor + 0.10F);
@@ -91,7 +86,6 @@ public class AgingTintingVertexBuilder implements IVertexBuilder {
         r = mix(r, agedR, agedMix);
         g = mix(g, agedG, agedMix);
         b = mix(b, agedB, agedMix);
-        // Subtle final dry / yellowing pass.
         float dryness = 0.05F * severity;
         r = clamp01(r + dryness * 0.85F);
         g = clamp01(g + dryness * 0.30F);

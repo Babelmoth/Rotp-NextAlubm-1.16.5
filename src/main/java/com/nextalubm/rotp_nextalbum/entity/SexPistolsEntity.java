@@ -9,6 +9,7 @@ import com.github.standobyte.jojo.entity.stand.StandPose;
 import com.github.standobyte.jojo.entity.stand.StandRelativeOffset;
 import com.github.standobyte.jojo.util.mc.damage.DamageUtil;
 import com.github.standobyte.jojo.util.mc.damage.StandLinkDamageSource;
+import com.nextalubm.rotp_nextalbum.NextAlbumConfig;
 import com.nextalubm.rotp_nextalbum.client.KickMuzzleFlashClientHandler;
 import com.nextalubm.rotp_nextalbum.client.SexPistolsAnimationClientHandler;
 import com.nextalubm.rotp_nextalbum.action.SexPistolsMoveSelectedAction;
@@ -70,8 +71,8 @@ public class SexPistolsEntity extends StandEntity implements IEntityAdditionalSp
     private static final int RETURN_TO_USER_DELAY_TICKS = KICK_ANIMATION_TICKS;
     private static final double RETURN_TO_USER_MAX_SPEED = 0.65D;
     private static final double RETURN_TO_USER_MIN_SPEED = 0.16D;
-    private static final int HUNGER_MIN_TICKS = 20 * 60 * 5;
-    private static final int HUNGER_EXTRA_TICKS = 20 * 60 * 5;
+    private static final int HUNGER_MIN_TICKS = NextAlbumConfig.getCommonConfigInstance(false).sexPistolsHungerMinTicks.get().intValue();
+    private static final int HUNGER_EXTRA_TICKS = NextAlbumConfig.getCommonConfigInstance(false).sexPistolsHungerExtraTicks.get().intValue();
     private static final double FOOD_SEARCH_RANGE = 9.0D;
     private static final int BEGGING_VOICE_MIN_DELAY = 80;
     private static final int BEGGING_VOICE_EXTRA_DELAY = 90;
@@ -399,6 +400,11 @@ public class SexPistolsEntity extends StandEntity implements IEntityAdditionalSp
     }
 
     public boolean isHungryForFood() {
+        boolean isHungerEnabled = NextAlbumConfig.getCommonConfig(this.level.isClientSide).isSexPistolsHunger.get();
+        if (!isHungerEnabled) {
+            return false;
+        }
+
         SexPistolsEntities pistols = getSharedPistolsEntities();
         return pistols != null ? pistols.isHungryForFood() && !pistols.isPistolFedThisRound(pistolIndex) : hungry;
     }
