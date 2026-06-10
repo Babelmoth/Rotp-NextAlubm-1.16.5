@@ -14,6 +14,7 @@
     "CreeperEntityAgingMixin",
     "LivingEntityAgingMixin",
     "LivingEntitySwingDurationMixin",
+    "MCUtilMixin",
     "TimeStopAgingMixin",
     "TimeStopInstantAgingMixin",
     "TimeStopInstanceAgingMixin",

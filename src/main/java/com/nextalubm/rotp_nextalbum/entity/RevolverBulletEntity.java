@@ -215,6 +215,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     private Vector3d timeStopStoredMotion;
     private int timeStopFlightTicks;
     private int timeStopSlowdownTicks;
+    private Vector3d timeStopHitMotion;
 
     private static class EncirclementGroup {
         private final UUID ownerId;
@@ -296,6 +297,14 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         timeStop = false;
         timeStopFlightTicks = 0;
         timeStopSlowdownTicks = 0;
+
+        if (timeStopHitMotion != null) {
+            setDeltaMovement(timeStopHitMotion);
+            timeStopHitMotion = null;
+            hasImpulse = true;
+            hurtMarked = true;
+        }
+
         if (timeStopStoredMotion != null && getDeltaMovement().lengthSqr() < 1.0E-6D) {
             setDeltaMovement(timeStopStoredMotion);
             hasImpulse = true;
@@ -417,6 +426,16 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     }
     @Override
     protected void onHitEntity(EntityRayTraceResult result) {
+
+        if (timeStop && result.getType() == RayTraceResult.Type.ENTITY) {
+            if (!level.isClientSide) {
+                timeStopHitMotion = getDeltaMovement();
+                setDeltaMovement(Vector3d.ZERO);
+            }
+            timeStopFlightTicks = 0;
+            super.canUpdate(false);
+            return;
+        }
         if (handlePiercingShotEntityHit(result)) {
             return;
         }
@@ -2254,15 +2273,12 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
 
         ImpactTier impactTier = classifyImpact(state, hardness);
 
-        // ================= 新增逻辑开始 =================
-        // 读取 Config：是否允许破坏方块
+
         boolean canDestroyBlocks = NextAlbumConfig.getCommonConfig(false).isBulletDestroyedBlocks.get();
 
-        // 如果 Config 设为 false，将易碎和柔软材质强制视为坚硬表面，防止破坏方块
         if (!canDestroyBlocks && (impactTier == ImpactTier.FRAGILE_BREAK || impactTier == ImpactTier.SOFT_BREAK)) {
             impactTier = ImpactTier.HARD_SURFACE;
         }
-        // ================= 新增逻辑结束 =================
 
         if (impactTier == ImpactTier.FRAGILE_BREAK) {
             clearBlockDamage(serverWorld, pos);

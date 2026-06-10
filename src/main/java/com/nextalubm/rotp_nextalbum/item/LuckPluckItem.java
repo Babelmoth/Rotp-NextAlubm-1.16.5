@@ -5,6 +5,10 @@ import com.nextalubm.rotp_nextalbum.client.render.LuckPluckGeoRenderer;
 
 import net.minecraft.item.ItemTier;
 import net.minecraft.item.SwordItem;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.enchantment.Enchantments;
+import com.github.standobyte.jojo.util.mc.MCUtil;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.PlayState;
 import software.bernie.geckolib3.core.builder.AnimationBuilder;
@@ -16,6 +20,7 @@ import software.bernie.geckolib3.util.GeckoLibUtil;
 
 public class LuckPluckItem extends SwordItem implements IAnimatable {
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
+    protected int enchantability = 22;
 
     public LuckPluckItem() {
         super(ItemTier.DIAMOND, 3, -2.4F, new Properties().tab(ModItems.MAIN_TAB).setISTER(() -> LuckPluckGeoRenderer::new));
@@ -29,6 +34,15 @@ public class LuckPluckItem extends SwordItem implements IAnimatable {
     @Override
     public AnimationFactory getFactory() {
         return factory;
+    }
+
+    public boolean openFingers() {
+        return true;
+    }
+
+    @Override
+    public int getEnchantmentValue() {
+        return enchantability;
     }
 
     private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {

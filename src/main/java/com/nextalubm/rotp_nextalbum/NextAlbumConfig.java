@@ -30,6 +30,9 @@ public class NextAlbumConfig {
         public final ForgeConfigSpec.DoubleValue minDistanceDamage;
         public final ForgeConfigSpec.IntValue maxRicochetCount;
 
+        // ==================== General Stands Settings ====================
+        public final ForgeConfigSpec.BooleanValue resolveAuraForAllStands;
+        public final ForgeConfigSpec.BooleanValue standResolveAura;
         // ==================== Sex Pistols Settings ====================
         public final ForgeConfigSpec.DoubleValue sexPistolsTargetSearchRange;
         public final ForgeConfigSpec.DoubleValue sexPistolsTransferAssistRange;
@@ -95,7 +98,21 @@ public class NextAlbumConfig {
                         .defineInRange("maxRicochetCount", 2, 0, Integer.MAX_VALUE);
             builder.pop();
             
-            builder.comment(" Settings for Sex Pistols Stand behavior.").push("Sex Pistols Settings");
+            builder.comment("Stand Settings").push("General Settings");
+
+             resolveAuraForAllStands = builder
+                    .comment("    Enable resolve aura VFX for all stands.",
+                            "     Default is False (only for Nextalbum Stand)")
+                    .translation("rotp_nextalbum.config.resolveAuraForAllStands")
+                    .define("resolveAuraForAllStands", false);
+
+            standResolveAura = builder
+                    .comment("    Enable resolve aura VFX for stands. So that the aura will also appear on stands.",
+                            "     Default is true")
+                    .translation("rotp_nextalbum.config.standResolveAura")
+                    .define("standResolveAura", true);
+
+            builder.push("Sex Pistols Settings");
                 sexPistolsTargetSearchRange = builder
                         .comment("    Maximum distance (in blocks) that Sex Pistols can search for targets when redirecting bullets.",
                                  "     Default is 32.0.")
@@ -207,7 +224,8 @@ public class NextAlbumConfig {
         COMMON_SYNCED_TO_CLIENT.closeDamageDropDistance.clearCache();
         COMMON_SYNCED_TO_CLIENT.minDistanceDamage.clearCache();
         COMMON_SYNCED_TO_CLIENT.maxRicochetCount.clearCache();
-        
+
+        COMMON_SYNCED_TO_CLIENT.resolveAuraForAllStands.clearCache();
         COMMON_SYNCED_TO_CLIENT.sexPistolsTargetSearchRange.clearCache();
         COMMON_SYNCED_TO_CLIENT.sexPistolsTransferAssistRange.clearCache();
         COMMON_SYNCED_TO_CLIENT.sexPistolsReviveTicks.clearCache();
