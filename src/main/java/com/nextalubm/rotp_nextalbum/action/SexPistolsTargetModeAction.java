@@ -91,6 +91,6 @@ public class SexPistolsTargetModeAction extends StandAction {
                 return sexPistols.getTargetMode();
             }
         }
-        return SexPistolsTargetMode.PLAYERS;
+        return SexPistolsTargetMode.ALL;
     }
 }

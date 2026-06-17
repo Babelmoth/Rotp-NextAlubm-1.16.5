@@ -15,6 +15,7 @@ import com.github.standobyte.jojo.network.PacketManager;
 import com.github.standobyte.jojo.network.packets.fromserver.TrSetStandEntityPacket;
 import com.nextalubm.rotp_nextalbum.NextAlbumConfig;
 import com.nextalubm.rotp_nextalbum.entity.SexPistolsEntity;
+import com.nextalubm.rotp_nextalbum.init.InitSounds;
 import com.nextalubm.rotp_nextalbum.init.InitStandEffects;
 import com.nextalubm.rotp_nextalbum.init.InitStands;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsTargetMode;
@@ -408,25 +409,29 @@ public class SexPistolsEntities extends StandEffectInstance {
     }
 
     private void summonForFoodBegging() {
-        if (world == null || world.isClientSide() || user == null || userPower == null) {
+        if (world == null || world.isClientSide || user == null || userPower == null) {
             return;
         }
-        boolean anySummoned = false;
+
+        com.github.standobyte.jojo.util.mod.JojoModUtil.sayVoiceLine(user, InitSounds.MISTA_SEX_PISTOLS.get());
+
         Vector3d position = user.position();
         for (int i = 0; i < InitStands.SEX_PISTOLS_ENTITY_TYPES.size(); i++) {
-            if (!isPistolAvailable(i)) {
-                continue;
-            }
+            if (!isPistolAvailable(i)) continue;
+
             SexPistolsEntity entity = createPistolEntity(i, position);
             if (entity != null) {
                 entity.playSummonAnimation();
-                anySummoned = true;
+
+                com.nextalubm.rotp_nextalbum.network.NetworkHandler.CHANNEL.send(
+                        net.minecraftforge.fml.network.PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> entity),
+                        new com.nextalubm.rotp_nextalbum.network.SexPistolsSummonAnimationPacket(
+                                entity.getId(), entity.getIdleAnimationVariant(), entity.getSummonAnimationVariant())
+                );
             }
         }
-        if (anySummoned) {
-            summoned = true;
-            onSummon();
-        }
+        this.summoned = true;
+        onSummon();
     }
 
     private SexPistolsEntity getPistolEntity(int pistolIndex) {

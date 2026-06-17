@@ -44,6 +44,9 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.KeybindTextComponent;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -970,6 +973,8 @@ public class RevolverItem extends Item implements IAnimatable {
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable World world, List<ITextComponent> tooltip, ITooltipFlag flag) {
+        tooltip.add(new TranslationTextComponent("item.nextalbum.revolver.tooltips",
+                new KeybindTextComponent("key.mouse.left"),new KeybindTextComponent("key.mouse.right"),new KeybindTextComponent("key.rotp_nextalbum.reload_revolver"),new KeybindTextComponent("key.mouse.middle")).withStyle(TextFormatting.GRAY));
         ClientUtil.addItemReferenceQuote(tooltip, this);
     }
 

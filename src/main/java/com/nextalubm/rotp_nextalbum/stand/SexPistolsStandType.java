@@ -6,10 +6,12 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import com.github.standobyte.jojo.advancements.ModCriteriaTriggers;
 import com.github.standobyte.jojo.client.ClientUtil;
 import com.github.standobyte.jojo.entity.stand.StandEntity;
 import com.github.standobyte.jojo.entity.stand.StandEntityType;
 import com.github.standobyte.jojo.entity.stand.StandRelativeOffset;
+import com.github.standobyte.jojo.power.impl.stand.IStandManifestation;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
 import com.github.standobyte.jojo.power.impl.stand.StandUtil;
 import com.github.standobyte.jojo.power.impl.stand.stats.StandStats;
@@ -25,6 +27,7 @@ import com.nextalubm.rotp_nextalbum.network.NetworkHandler;
 import com.nextalubm.rotp_nextalbum.network.SexPistolsSummonAnimationPacket;
 
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.network.PacketDistributor;
 
@@ -63,6 +66,7 @@ public class SexPistolsStandType extends EntityStandType<StandStats> {
         if (!withoutNameVoiceLine && !user.isShiftKeyDown()) {
             JojoModUtil.sayVoiceLine(user, InitSounds.MISTA_SEX_PISTOLS.get());
         }
+
         triggerAdvancement(standPower, standPower.getStandManifestation());
         if (!user.level.isClientSide()) {
             SexPistolsEntities summonedEntities = getSexPistolsEntities(standPower).orElse(null);
@@ -108,6 +112,13 @@ public class SexPistolsStandType extends EntityStandType<StandStats> {
             summonedEntities.onSummon();
         }
         return true;
+
+    }
+
+    protected void triggerAdvancement(IStandPower standPower, IStandManifestation stand) {
+        if (standPower.getUser() instanceof ServerPlayerEntity) {
+            ModCriteriaTriggers.SUMMON_STAND.get().trigger((ServerPlayerEntity) standPower.getUser(), standPower);
+        }
     }
 
     @Override

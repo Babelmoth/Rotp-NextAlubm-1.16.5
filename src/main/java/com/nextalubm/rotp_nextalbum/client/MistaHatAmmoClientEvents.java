@@ -95,7 +95,7 @@ public class MistaHatAmmoClientEvents {
             return;
         }
         MatrixStack matrixStack = event.getMatrixStack();
-        int slotCount = Math.min(storedStacks.size(), 2);
+        int slotCount = Math.min(storedStacks.size(), 4);
         int left = event.getX();
         int top = event.getY() + getInsertedImageTop(event.getLines());
         renderItems(event, storedStacks, left, top, slotCount);

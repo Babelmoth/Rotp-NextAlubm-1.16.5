@@ -6,6 +6,7 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import com.github.standobyte.jojo.client.ClientUtil;
 import com.github.standobyte.jojo.init.ModItems;
 import com.nextalubm.rotp_nextalbum.NextAlubm;
 import com.nextalubm.rotp_nextalbum.client.render.MistaSuitArmorRenderer;
@@ -13,23 +14,34 @@ import com.nextalubm.rotp_nextalbum.init.InitItems;
 
 import net.minecraft.client.entity.player.AbstractClientPlayerEntity;
 import net.minecraft.client.renderer.entity.model.BipedModel;
+import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.ArmorItem;
 import net.minecraft.item.IArmorMaterial;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.KeybindTextComponent;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraft.util.DamageSource;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.manager.AnimationData;
 import software.bernie.geckolib3.core.manager.AnimationFactory;
 import software.bernie.geckolib3.util.GeckoLibUtil;
 
+@EventBusSubscriber(modid = NextAlubm.MOD_ID, bus = EventBusSubscriber.Bus.FORGE)
+
 public class MistaSuitArmorItem extends ArmorItem implements IAnimatable {
     private static final String STORED_AMMO_KEY = "StoredRevolverAmmo";
-    private static final int MAX_STORED_AMMO = 128;
+    private static final int MAX_STORED_AMMO = 256;
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
     private final String modelPath;
     private final String texturePath;
@@ -88,6 +100,18 @@ public class MistaSuitArmorItem extends ArmorItem implements IAnimatable {
 
     public static boolean isMistaHat(ItemStack stack) {
         return !stack.isEmpty() && stack.getItem() instanceof MistaSuitArmorItem && ((MistaSuitArmorItem) stack.getItem()).getSlot() == EquipmentSlotType.HEAD;
+
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, @Nullable World world, List<ITextComponent> tooltip, ITooltipFlag flag) {
+        if (isMistaHat(stack)) {
+        tooltip.add(new TranslationTextComponent("item.nextalbum.mista_hat.tooltips").withStyle(TextFormatting.GRAY));
+        }
+        if (!isMistaHat(stack)){
+            tooltip.add(new TranslationTextComponent("item.nextalbum.mista_suit.tooltips").withStyle(TextFormatting.GRAY));
+        }
+        ClientUtil.addItemReferenceQuote(tooltip, this);
     }
 
     public static boolean isAmmoItem(ItemStack stack) {
@@ -105,7 +129,7 @@ public class MistaSuitArmorItem extends ArmorItem implements IAnimatable {
     public static List<ItemStack> getStoredAmmoStacks(ItemStack stack) {
         List<ItemStack> stacks = new ArrayList<>();
         int stored = getStoredAmmo(stack);
-        while (stored > 0 && stacks.size() < 2) {
+        while (stored > 0 && stacks.size() < 4) {
             int count = Math.min(stored, InitItems.REVOLVER_AMMO.get().getMaxStackSize());
             stacks.add(new ItemStack(InitItems.REVOLVER_AMMO.get(), count));
             stored -= count;
@@ -166,6 +190,36 @@ public class MistaSuitArmorItem extends ArmorItem implements IAnimatable {
         }
         else {
             stack.getOrCreateTag().putInt(STORED_AMMO_KEY, clamped);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingHurt(LivingHurtEvent event) {
+        LivingEntity entity = event.getEntityLiving();
+        DamageSource source = event.getSource();
+
+        boolean isRevolverBullet = "revolver_bullet".equals(source.getMsgId());
+
+        boolean isProjectile = source.isProjectile();
+
+        if (isRevolverBullet || isProjectile) {
+
+            int suitPiecesCount = 0;
+            for (ItemStack armorStack : entity.getArmorSlots()) {
+                if (!armorStack.isEmpty() && armorStack.getItem() instanceof MistaSuitArmorItem) {
+                    suitPiecesCount++;
+                }
+            }
+
+            if (suitPiecesCount > 0) {
+
+                float reductionFactor = suitPiecesCount * 0.15F;
+
+                float currentDamage = event.getAmount();
+                float newDamage = currentDamage * (1.0F - reductionFactor);
+
+                event.setAmount(newDamage);
+            }
         }
     }
 

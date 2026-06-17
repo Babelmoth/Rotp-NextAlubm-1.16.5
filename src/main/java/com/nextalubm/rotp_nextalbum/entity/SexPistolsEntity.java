@@ -100,6 +100,7 @@ public class SexPistolsEntity extends StandEntity implements IEntityAdditionalSp
     private int returnToUserTicks;
     private int hungerTicks;
     private boolean hungry;
+    private boolean pendingBegging = false;
     private UUID beggingPlayerId;
     private UUID itemPickupTargetId;
     private int beggingVoiceCooldown;
@@ -130,6 +131,9 @@ public class SexPistolsEntity extends StandEntity implements IEntityAdditionalSp
             SexPistolsAnimationClientHandler.tickPendingSummons();
             KickMuzzleFlashClientHandler.consumePending(this);
             KickMuzzleFlashClientHandler.tickPending();
+        }
+        if (!level.isClientSide && tickCount == 1) {
+            this.hungry = isHungryForFood();
         }
         tickSummonAnimation();
         tickKickAnimation();
@@ -466,41 +470,41 @@ public class SexPistolsEntity extends StandEntity implements IEntityAdditionalSp
     }
 
     private void tickFeedingBehavior() {
-        if (level.isClientSide) {
-            return;
-        }
+        if (level.isClientSide) return;
+
         if (eatAnimationTicks > 0) {
             tickEatingAnimation();
             return;
         }
-        hungry = isHungryForFood();
-        if (!hungry) {
-            beggingPlayerId = null;
-            if (entityData.get(FOOD_BEGGING)) {
-                leaveFoodBeggingHold(true);
+
+        if (summonAnimationTicks > 0) return;
+        if (isAlive()) {
+            if (eatAnimationTicks > 0) {
+                tickEatingAnimation();
+                return;
             }
+
+            PlayerEntity player = getBeggingTarget();
+            if (player != null && isHoldingFood(player)) {
+            }
+        }
+        if (!hungry) {
+            if (entityData.get(FOOD_BEGGING)) leaveFoodBeggingHold(true);
             return;
         }
-        if (summonAnimationTicks > 0 || kickAnimationTicks > 0 || isManuallyControlled()) {
-            return;
-        }
+
         PlayerEntity player = getBeggingTarget();
-        if (player == null || !isHoldingFood(player)) {
-            player = findFoodHoldingPlayer();
-        }
-        if (player == null) {
-            beggingPlayerId = null;
-            leaveFoodBeggingHold(true);
-            return;
-        }
-        beggingPlayerId = player.getUUID();
-        enterFoodBeggingHold();
-        tickBeggingMovement(player);
-        if (isFoodOwner(player)) {
+        if (player == null) player = findFoodHoldingPlayer();
+
+        if (player != null && isHoldingFood(player)) {
+            beggingPlayerId = player.getUUID();
+            if (!entityData.get(FOOD_BEGGING)) {
+                enterFoodBeggingHold();
+            }
+            tickBeggingMovement(player);
             tickBeggingVoice(player);
-        }
-        else if (distanceToSqr(player) <= 2.25D) {
-            stealFoodFrom(player);
+        } else if (entityData.get(FOOD_BEGGING)) {
+            leaveFoodBeggingHold(false);
         }
     }
 
@@ -581,6 +585,7 @@ public class SexPistolsEntity extends StandEntity implements IEntityAdditionalSp
         Vector3d current = position();
         Vector3d toTarget = target.subtract(current);
         double distance = toTarget.length();
+        this.beggingPlayerId = player.getUUID();
         if (distance > 0.08D) {
             double speed = MathHelper.clamp(distance * 0.28D, BEGGING_MIN_SPEED, BEGGING_MAX_SPEED);
             Vector3d movement = toTarget.normalize().scale(Math.min(speed, distance));
