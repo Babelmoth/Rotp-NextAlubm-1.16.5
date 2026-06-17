@@ -2,13 +2,7 @@ package com.nextalubm.rotp_nextalbum.client;
 
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 
-/**
- * Vertex builder wrapper that recolors per-vertex RGB toward a deep
- * tobacco-brown / dry yellow-brown skin-aging tone for living entities. The
- * aging strength comes from {@link AgingVisualUtil#entityCurve(float)} so the
- * visible color shift is subtle in the early aging window, becomes clearly
- * yellowed at mid progress, and lands on a deep brown-yellow at full aging.
- */
+
 public class AgingTintingVertexBuilder implements IVertexBuilder {
     private final IVertexBuilder delegate;
     private final float progress;
