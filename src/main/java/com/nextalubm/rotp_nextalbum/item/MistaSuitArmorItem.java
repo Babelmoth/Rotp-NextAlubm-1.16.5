@@ -104,6 +104,7 @@ public class MistaSuitArmorItem extends ArmorItem implements IAnimatable {
     }
 
     @Override
+    @OnlyIn(Dist.CLIENT)
     public void appendHoverText(ItemStack stack, @Nullable World world, List<ITextComponent> tooltip, ITooltipFlag flag) {
         if (isMistaHat(stack)) {
         tooltip.add(new TranslationTextComponent("item.nextalbum.mista_hat.tooltips").withStyle(TextFormatting.GRAY));

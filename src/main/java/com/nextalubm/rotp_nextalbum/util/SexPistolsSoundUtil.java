@@ -46,7 +46,7 @@ public final class SexPistolsSoundUtil {
             return;
         }
         UUID uuid = entity.getUUID();
-        ResourceLocation soundId = sound.getLocation();
+        ResourceLocation soundId = sound.getRegistryName();
         long gameTime = entity.level.getGameTime();
         Map<ResourceLocation, Long> cooldowns = SOUND_COOLDOWNS.computeIfAbsent(uuid, key -> new HashMap<>());
         long nextAllowedTick = cooldowns.getOrDefault(soundId, 0L);
