@@ -972,6 +972,7 @@ public class RevolverItem extends Item implements IAnimatable {
     }
 
     @Override
+    @OnlyIn(Dist.CLIENT)
     public void appendHoverText(ItemStack stack, @Nullable World world, List<ITextComponent> tooltip, ITooltipFlag flag) {
         tooltip.add(new TranslationTextComponent("item.nextalbum.revolver.tooltips",
                 new KeybindTextComponent("key.mouse.left"),new KeybindTextComponent("key.mouse.right"),new KeybindTextComponent("key.rotp_nextalbum.reload_revolver"),new KeybindTextComponent("key.mouse.middle")).withStyle(TextFormatting.GRAY));
