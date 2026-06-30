@@ -29,6 +29,7 @@ import com.nextalubm.rotp_nextalbum.action.SexPistolsTrajectoryVisionAction;
 import com.nextalubm.rotp_nextalbum.action.SexPistolsTransferOrderAction;
 import com.nextalubm.rotp_nextalbum.action.TheGratefulDeadAgingAuraAction;
 import com.nextalubm.rotp_nextalbum.action.TheGratefulDeadAgingTouchAction;
+import com.nextalubm.rotp_nextalbum.action.TheGratefulDeadBarrageAction;
 import com.nextalubm.rotp_nextalbum.action.TheGratefulDeadRemoveAgingAction;
 import com.nextalubm.rotp_nextalbum.entity.SexPistolsEntity;
 import com.nextalubm.rotp_nextalbum.entity.SilverChariotRequiemEntity;
@@ -110,7 +111,7 @@ public class InitStands {
                     .punchSound(ModSounds.STAND_PUNCH_LIGHT)
                     .swingSound(ModSounds.STAND_PUNCH_SWING)));
     public static final RegistryObject<StandEntityMeleeBarrage> THE_GRATEFUL_DEAD_BARRAGE = ACTIONS.register("the_grateful_dead_barrage",
-            () -> new StandEntityMeleeBarrage(new StandEntityMeleeBarrage.Builder()
+            () -> new TheGratefulDeadBarrageAction(new StandEntityMeleeBarrage.Builder()
                     .barrageHitSound(ModSounds.STAND_PUNCH_LIGHT)
                     .barrageSwingSound(ModSounds.STAND_PUNCH_BARRAGE_SWING)));
     public static final RegistryObject<StandEntityHeavyAttack> THE_GRATEFUL_DEAD_HEAVY_PUNCH = ACTIONS.register("the_grateful_dead_heavy_punch",
