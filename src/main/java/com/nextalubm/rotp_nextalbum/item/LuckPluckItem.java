@@ -19,6 +19,8 @@ import net.minecraft.util.text.KeybindTextComponent;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.ForgeMod;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.PlayState;
@@ -81,6 +83,7 @@ public class LuckPluckItem extends SwordItem implements IAnimatable {
     }
 
     @Override
+    @OnlyIn(Dist.CLIENT)
     public void appendHoverText(ItemStack stack, @Nullable World world, List<ITextComponent> tooltip, ITooltipFlag flag) {
         tooltip.add(new TranslationTextComponent("item.nextalbum.luck_pluck.tooltips").withStyle(TextFormatting.GRAY));
         ClientUtil.addItemReferenceQuote(tooltip, this);
