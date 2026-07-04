@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jojo:super_aja_stone"
+    },{
+      "item": "minecraft:string"
+    },{
+      "tag": "forge:ingots/iron"
+    }
+  ],
+  "result": {
+    "item": "rotp_nextalbum:aja_stone_necklace"
+  }
+}

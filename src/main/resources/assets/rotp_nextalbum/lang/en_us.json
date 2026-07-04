@@ -7,12 +7,15 @@
   "item.rotp_nextalbum.plant_aging_dust": "Plant Ash",
   "item.rotp_nextalbum.luck_pluck": "Luck & Pluck",
   "item.rotp_nextalbum.luck_pluck.reference_quote":  "\"Jonathan... I offer you the word engraved on my sword! Luck! And take this with you to your future! Pluck! \"",
-  "item.nextalbum.luck_pluck.tooltips": "Has same enchantment capabilities with a golden sword and a longer attack range. Additionally, you can use the Hamon skill, which can only be used unarmed, while holding this item.",
+  "item.nextalbum.luck_pluck.tooltips": "Has same enchantment capabilities with a golden sword and a longer attack range. Additionally, you can use the Hamon action, which can only be used unarmed, while holding this item.",
+  "item.rotp_nextalbum.aja_stone_necklace":  "Aja Stone Necklace",
+  "item.rotp_nextalbum.aja_stone_necklace.reference_quote":  "\"This is it... Nature's perfect miracle crystal. Without a single imperfection! The Super Aja!\"",
+  "item.nextalbum.aja_stone_necklace.tooltips": "When equipped, this allows you to press %s+%s to unleash a beam attack with effects, damage, and cooldowns identical to the Super Aja item.",
   "item.rotp_nextalbum.mista_suit_hat": "Mista's Hat",
-  "item.nextalbum.mista_hat.tooltips": "Right-clicking while holding bullets will store them in your hat; right-clicking again will remove them. Up to four stacks of bullets can be stored. Stored bullets can be used directly with a revolver. Each suit provides +15% protection against projectile and bullet damage.",
+  "item.nextalbum.mista_hat.tooltips": "Right-clicking on the hat with bullets will store them inside; right-clicking again will take them out. Up to four stacks of bullets can be stored. Stored bullets can be used directly with a revolver. Each suit piece provides +15% protection against projectile and bullet damage.",
   "item.rotp_nextalbum.mista_suit_hat.reference_quote":  "\"My Stand's suited for assassinations!\"",
   "item.rotp_nextalbum.mista_suit_cloth": "Mista's Cloth",
-  "item.nextalbum.mista_suit.tooltips": " Each suit provides +15% protection against projectile and bullet damage.",
+  "item.nextalbum.mista_suit.tooltips": " Each suit piece provides +15% protection against projectile and bullet damage.",
   "item.rotp_nextalbum.mista_suit_cloth.reference_quote":  "\"My Stand's suited for assassinations!\"",
   "item.rotp_nextalbum.mista_suit_pants": "Mista's Pants",
   "item.rotp_nextalbum.mista_suit_pants.reference_quote":  "\"My Stand's suited for assassinations!\"",
@@ -67,9 +70,9 @@
   "action.rotp_nextalbum.sex_pistols_piercing_shot": "Piercing Shot",
   "action.rotp_nextalbum.sex_pistols_splitting_shot": "Splitting Shot",
   "rotp_nextalbum.subtitle.mista_sex_pistols":"\"Sex Pistols!\"",
-  "rotp_nextalbum.subtitle.mista_pistols":"\"Pisotls!\"",
+  "rotp_nextalbum.subtitle.mista_pistols":"\"Pistols!\"",
   "rotp_nextalbum.subtitle.sex_pistols_pass":"\"PASS! PASS! PASS!\"",
-  "rotp_nextalbum.subtitle.sex_pistols_ricochet_yorodomo":"\"Aim! aim,you idiots\"",
+  "rotp_nextalbum.subtitle.sex_pistols_ricochet_yorodomo":"\"Aim! Aim, you idiots!\"",
   "rotp_nextalbum.subtitle.sex_pistols_ricochet_hit_yada":"\"Finally!\"",
   "rotp_nextalbum.subtitle.sex_pistols_ricochet_hit_yaho":"\"YAHOOOOO!\"",
   "rotp_nextalbum.subtitle.sex_pistols_ricochet_hit_ye":"\"YEAHHHHHH!\"",
@@ -88,6 +91,7 @@
 
   "entity.rotp_nextalbum.silver_chariot_requiem": "Silver Chariot Requiem",
   "stand.rotp_nextalbum.silver_chariot_requiem": "Silver Chariot Requiem",
+
   "entity.rotp_nextalbum.the_grateful_dead": "The Grateful Dead",
   "stand.rotp_nextalbum.the_grateful_dead": "The Grateful Dead",
   "action.rotp_nextalbum.the_grateful_dead_punch": "Punch",
@@ -110,5 +114,7 @@
   "advancements.rotp_nextalbum.four_attack.title":"Four Attack !?",
   "advancements.rotp_nextalbum.four_attack.description":"Kill four enemies with splitting shot fragments in a single shot.",
   "advancements.rotp_nextalbum.full_mista_suit.title": "My Stand's suited for assassinations!",
-  "advancements.rotp_nextalbum.full_mista_suit.description": "Get all Mista suit."
+  "advancements.rotp_nextalbum.full_mista_suit.description": "Get all Mista suit.",
+  "advancements.rotp_nextalbum.get_aja_stone.title": "新難題「エイジャの赤石」",
+  "advancements.rotp_nextalbum.get_aja_stone.description": "Obtain a Super Aja Red Stone in any form."
 }

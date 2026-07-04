@@ -173,6 +173,8 @@ repositories {
     maven { url 'https://maven.minecraftforge.net' }
     // GeckoLib
     maven { url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
+
+    maven { url = "https://www.cursemaven.com" }
     flatDir { dirs 'libs' }
 }
 
@@ -205,7 +207,8 @@ dependencies {
 	
 	// GeckoLib for animated entity models (updated to latest for 1.16.5 with alpha support)
 	implementation fg.deobf('software.bernie.geckolib:geckolib-forge-1.16.5:3.0.104')
-	
+
+    implementation fg.deobf("curse.maven:curios-309927:4419403")
 	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 

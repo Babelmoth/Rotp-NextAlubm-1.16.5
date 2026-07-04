@@ -8,6 +8,9 @@
     "item.rotp_nextalbum.luck_pluck":  "幸运与勇气之剑",
     "item.rotp_nextalbum.luck_pluck.reference_quote":  "\"乔纳森...就把这女王赐给我的剑上篆刻的话语献给你吧...!\"",
     "item.nextalbum.luck_pluck.tooltips": "具有等同于金剑的附魔能力和较长的攻击距离，同时，你可以在手持该物品时使用空手才能使用的波纹技能。",
+    "item.rotp_nextalbum.aja_stone_necklace":  "艾哲红石项链",
+    "item.rotp_nextalbum.aja_stone_necklace.reference_quote":  "\"这就是完美无瑕、自然生成的奇迹晶体——超级艾哲！！\"",
+    "item.nextalbum.aja_stone_necklace.tooltips": "当佩戴后，允许你按下%s+%s来使用一次效果/伤害/冷却等同于超级艾哲的光束攻击。",
     "item.rotp_nextalbum.mista_suit_hat":  "米斯达的帽子",
     "item.nextalbum.mista_hat.tooltips": "鼠标拿取子弹物品按下右键可将拿取的左轮子弹存入帽子中，再次按下右键即可拿出，最多可装入四组子弹。存入的子弹可被左轮手枪直接取用。每件提供+15%的投射物及子弹伤害防护。",
     "item.rotp_nextalbum.mista_suit_hat.reference_quote":  "\"我的替身能力....最适合暗杀了!\"",
@@ -111,5 +114,7 @@
     "advancements.rotp_nextalbum.four_attack.title":  "？！四四！？",
     "advancements.rotp_nextalbum.four_attack.description":  "通过分裂射击的碎裂弹片在一次射击中击杀四名敌人。",
     "advancements.rotp_nextalbum.full_mista_suit.title": "我的替身能力....最适合暗杀了!",
-    "advancements.rotp_nextalbum.full_mista_suit.description": "获得全套米斯达服装."
+    "advancements.rotp_nextalbum.full_mista_suit.description": "获得全套米斯达服装.",
+    "advancements.rotp_nextalbum.get_aja_stone.title": "新難題「エイジャの赤石」",
+    "advancements.rotp_nextalbum.get_aja_stone.description": "获得一枚任意形式的超级艾哲红石"
 }
