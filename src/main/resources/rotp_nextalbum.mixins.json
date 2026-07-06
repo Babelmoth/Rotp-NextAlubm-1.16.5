@@ -15,9 +15,6 @@
     "LivingEntityAgingMixin",
     "LivingEntitySwingDurationMixin",
     "MCUtilMixin",
-    "TimeStopAgingMixin",
-    "TimeStopInstantAgingMixin",
-    "TimeStopInstanceAgingMixin",
     "ResolveCounterSexPistolsMixin"
   ],
   "client": [
