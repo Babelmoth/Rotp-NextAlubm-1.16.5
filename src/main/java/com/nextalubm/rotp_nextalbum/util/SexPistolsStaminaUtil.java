@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.github.standobyte.jojo.init.ModStatusEffects;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
 import com.nextalubm.rotp_nextalbum.NextAlubm;
 import com.nextalubm.rotp_nextalbum.init.InitStands;
@@ -58,7 +59,7 @@ public final class SexPistolsStaminaUtil {
             return 0;
         }
         IStandPower power = powerOptional.get();
-        if (!power.usesStamina() || power.isStaminaInfinite()) {
+        if (!power.usesStamina() || power.isStaminaInfinite() || user.hasEffect(ModStatusEffects.RESOLVE.get())) {
             return MAX_QUICK_RELOAD_BULLETS;
         }
         return Math.min(MAX_QUICK_RELOAD_BULLETS, (int) (power.getStamina() / QUICK_RELOAD_BULLET_COST));
@@ -83,10 +84,28 @@ public final class SexPistolsStaminaUtil {
         if (!power.usesStamina() || power.isStaminaInfinite()) {
             return true;
         }
+
+        boolean isResolved = user.hasEffect(ModStatusEffects.RESOLVE.get());
+
         if (power.getStamina() < amount) {
+            if (isResolved) {
+                if (power.getStamina() > 0.0F) {
+                    power.consumeStamina(power.getStamina());
+                }
+                pauseStaminaRecovery(user);
+                return true;
+            }
             return false;
         }
+
         boolean consumed = power.consumeStamina(amount);
+        if (!consumed && isResolved) {
+            if (power.getStamina() > 0.0F) {
+                power.consumeStamina(power.getStamina());
+            }
+            consumed = true;
+        }
+
         if (consumed) {
             pauseStaminaRecovery(user);
         }

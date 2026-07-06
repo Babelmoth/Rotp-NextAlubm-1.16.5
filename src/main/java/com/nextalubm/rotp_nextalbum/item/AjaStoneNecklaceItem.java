@@ -277,6 +277,7 @@ public class AjaStoneNecklaceItem extends ArmorItem implements IAnimatable, ICur
     }
 
     @Override
+    @OnlyIn(Dist.CLIENT)
     public void render(String identifier, int index, MatrixStack matrixStack, IRenderTypeBuffer buffer, int light,
                        LivingEntity entity, float limbSwing, float limbSwingAmount, float partialTicks,
                        float ticks, float headYaw, float headPitch, ItemStack stack) {

@@ -73,7 +73,7 @@ public class RevolverItem extends Item implements IAnimatable {
     public static final String ENCIRCLEMENT_CHAMBERS_KEY = "EncirclementChambers";
     public static final String PIERCING_CHAMBERS_KEY = "PiercingChambers";
     public static final String SPLITTING_CHAMBERS_KEY = "SplittingChambers";
-    
+
     private static final int MAX_AMMO = 6;
     private static final int FULL_CHAMBERS = (1 << MAX_AMMO) - 1;
     private static final int SHOT_COOLDOWN_TICKS = 5;
@@ -184,7 +184,6 @@ public class RevolverItem extends Item implements IAnimatable {
         }
     }
 
-
     private static void clearInvalidSexPistolsAttachments(ItemStack stack, PlayerEntity player) {
         if (!hasPistolAttachments(stack)) {
             return;
@@ -245,6 +244,7 @@ public class RevolverItem extends Item implements IAnimatable {
     public static void clearLoadedSexPistolsForPlayer(PlayerEntity player) {
         IStandPower.getStandPowerOptional(player).ifPresent(power -> SexPistolsStandType.getSexPistolsEntities(power).ifPresent(SexPistolsEntities::clearLoadedPistols));
     }
+
     public void handleServerShoot(ServerPlayerEntity player, ItemStack stack) {
         normalizeChambers(stack);
         if (getShotCooldown(stack) > 0 || isReloadMode(stack)) {
@@ -351,6 +351,7 @@ public class RevolverItem extends Item implements IAnimatable {
         double t = MathHelper.clamp(point.subtract(start).dot(segment) / lengthSqr, 0.0D, 1.0D);
         return point.distanceToSqr(start.add(segment.scale(t)));
     }
+
     public void handleServerFillChamber(ServerPlayerEntity player, ItemStack stack) {
         normalizeChambers(stack);
         if (!isReloadMode(stack)) {
@@ -409,7 +410,6 @@ public class RevolverItem extends Item implements IAnimatable {
         return loaded;
     }
 
-
     public boolean loadAmmoIntoSelectedChamber(ServerPlayerEntity player, ItemStack stack) {
         normalizeChambers(stack);
         if (!isReloadMode(stack)) {
@@ -430,6 +430,7 @@ public class RevolverItem extends Item implements IAnimatable {
         applyReloadCooldown(player, stack);
         return true;
     }
+
     public void handleServerExtractChamber(ServerPlayerEntity player, ItemStack stack) {
         normalizeChambers(stack);
         if (!isReloadMode(stack)) {
@@ -463,6 +464,7 @@ public class RevolverItem extends Item implements IAnimatable {
         }
         player.level.playSound(null, player.blockPosition(), InitSounds.REVOLVER_DRY_FIRE.get(), SoundCategory.PLAYERS, 0.45F, 1.2F);
     }
+
     public void handleServerSwitchChamber(ServerPlayerEntity player, ItemStack stack, boolean forward) {
         normalizeChambers(stack);
         if (!isReloadMode(stack)) {
@@ -488,7 +490,7 @@ public class RevolverItem extends Item implements IAnimatable {
         }
         float pitch = player.xRot;
         float yaw = player.yRot;
-        if (!shootBulletWithMask(player, stack, getPistolMask(stack, startChamber), true, false, false, pitch, yaw)) {
+        if (!shootBulletWithMask(player, stack, startChamber, getPistolMask(stack, startChamber), true, false, false, pitch, yaw)) {
             return;
         }
         setChamberLoaded(stack, startChamber, false);
@@ -497,13 +499,14 @@ public class RevolverItem extends Item implements IAnimatable {
         setSelectedChamber(stack, startChamber + 1);
         applyRecoil(player, stack);
     }
+
     private void shootPiercingShot(ServerPlayerEntity player, ItemStack stack, int chamber) {
         if (!hasBullet(stack, chamber) || !hasPiercingChamber(stack, chamber)) {
             return;
         }
         float pitch = player.xRot;
         float yaw = player.yRot;
-        if (!shootBulletWithMask(player, stack, getPistolMask(stack, chamber), false, true, false, pitch, yaw)) {
+        if (!shootBulletWithMask(player, stack, chamber, getPistolMask(stack, chamber), false, true, false, pitch, yaw)) {
             return;
         }
         setChamberLoaded(stack, chamber, false);
@@ -518,7 +521,7 @@ public class RevolverItem extends Item implements IAnimatable {
         }
         float pitch = player.xRot;
         float yaw = player.yRot;
-        if (!shootBulletWithMask(player, stack, getPistolMask(stack, chamber), false, false, true, pitch, yaw)) {
+        if (!shootBulletWithMask(player, stack, chamber, getPistolMask(stack, chamber), false, false, true, pitch, yaw)) {
             return;
         }
         setChamberLoaded(stack, chamber, false);
@@ -532,13 +535,21 @@ public class RevolverItem extends Item implements IAnimatable {
     }
 
     private boolean shootBullet(ServerPlayerEntity player, ItemStack stack, int chamber, float pitch, float yaw) {
-        return shootBulletWithMask(player, stack, getPistolMask(stack, chamber), hasEncirclementChamber(stack, chamber), false, false, pitch, yaw);
+        return shootBulletWithMask(player, stack, chamber, getPistolMask(stack, chamber), hasEncirclementChamber(stack, chamber), false, false, pitch, yaw);
     }
 
-    private boolean shootBulletWithMask(ServerPlayerEntity player, ItemStack stack, int pistolMask, boolean encirclement, boolean piercingShot, boolean splittingShot, float pitch, float yaw) {
+    // --- 核心修复区域：支持降级射击，绝不卡壳阻止开枪 ---
+    private boolean shootBulletWithMask(ServerPlayerEntity player, ItemStack stack, int chamber, int pistolMask, boolean encirclement, boolean piercingShot, boolean splittingShot, float pitch, float yaw) {
         if (!SexPistolsStaminaUtil.consumeBulletFireStamina(player, pistolMask, encirclement, piercingShot, splittingShot)) {
-            player.level.playSound(null, player.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundCategory.PLAYERS, 0.45F, 0.75F);
-            return false;
+            // 体力不足且非觉悟状态时，绝不阻止子弹射出！
+            // 自动将附带的性感手枪召回，并剥离所有的特殊射击标志，将其降级为一发普通子弹。
+            if (pistolMask != 0) {
+                releasePistolsFromChamber(player, stack, chamber);
+            }
+            pistolMask = 0;
+            encirclement = false;
+            piercingShot = false;
+            splittingShot = false;
         }
         RevolverBulletEntity bullet = new RevolverBulletEntity(player.level, player);
         bullet.setLoadedSexPistolsMask(pistolMask);
@@ -597,6 +608,7 @@ public class RevolverItem extends Item implements IAnimatable {
             player.drop(extracted, false);
         }
     }
+
     private boolean consumeAmmoItem(PlayerEntity player) {
         List<ItemStack> items = player.inventory.items;
         for (ItemStack inventoryStack : items) {
@@ -766,7 +778,6 @@ public class RevolverItem extends Item implements IAnimatable {
         setSpentChambers(stack, spent ? spentChambers | mask : spentChambers & ~mask);
     }
 
-
     public static int getEncirclementChambers(ItemStack stack) {
         return getOrCreateTag(stack).getInt(ENCIRCLEMENT_CHAMBERS_KEY) & FULL_CHAMBERS & getChambers(stack);
     }
@@ -784,6 +795,7 @@ public class RevolverItem extends Item implements IAnimatable {
     public static void clearEncirclementChamber(ItemStack stack, int chamber) {
         setEncirclementChamber(stack, chamber, false);
     }
+
     public static int getPiercingChambers(ItemStack stack) {
         return getOrCreateTag(stack).getInt(PIERCING_CHAMBERS_KEY) & FULL_CHAMBERS & getChambers(stack);
     }
@@ -801,6 +813,7 @@ public class RevolverItem extends Item implements IAnimatable {
     public static void clearPiercingChamber(ItemStack stack, int chamber) {
         setPiercingChamber(stack, chamber, false);
     }
+
     public static int getSplittingChambers(ItemStack stack) {
         return getOrCreateTag(stack).getInt(SPLITTING_CHAMBERS_KEY) & FULL_CHAMBERS & getChambers(stack);
     }
@@ -861,7 +874,6 @@ public class RevolverItem extends Item implements IAnimatable {
         getOrCreateTag(stack).putIntArray(PISTOL_CHAMBERS_KEY, pistolChambers);
     }
 
-
     public static boolean hasPistolAttachments(ItemStack stack) {
         int[] pistolChambers = getPistolChambers(stack);
         for (int pistolMask : pistolChambers) {
@@ -875,6 +887,7 @@ public class RevolverItem extends Item implements IAnimatable {
     public static void clearAllPistolChambers(ItemStack stack) {
         getOrCreateTag(stack).putIntArray(PISTOL_CHAMBERS_KEY, new int[MAX_AMMO]);
     }
+
     public static boolean isPistolLoadedInAnyChamber(ItemStack stack, int pistolIndex) {
         int mask = 1 << Math.floorMod(pistolIndex, MAX_AMMO);
         int[] pistolChambers = getPistolChambers(stack);
@@ -885,6 +898,7 @@ public class RevolverItem extends Item implements IAnimatable {
         }
         return false;
     }
+
     public static void normalizeChambers(ItemStack stack) {
         setSelectedChamber(stack, getSelectedChamber(stack));
         setChambers(stack, getChambers(stack));
