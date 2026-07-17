@@ -1,0 +1,5 @@
+v0.1.11
+ ·Fixed The Grateful Dead's wrong mixin which cause bugged time stop. Now you can use time stop as normal.
+ ·Fixed entity render problem.(I think)
+v0.1.12
+ ·Now Sex Pistols can pick up item in longer range.

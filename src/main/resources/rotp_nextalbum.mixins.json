@@ -15,7 +15,9 @@
     "LivingEntityAgingMixin",
     "LivingEntitySwingDurationMixin",
     "MCUtilMixin",
-    "ResolveCounterSexPistolsMixin"
+    "ResolveCounterSexPistolsMixin",
+    "TimeStopAgingMixin",
+    "TimeStopInstantAgingMixin"
   ],
   "client": [
     "client.PlayerRendererMixin",

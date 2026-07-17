@@ -27,15 +27,14 @@ public abstract class LivingRendererAgingMixin<T extends LivingEntity, M extends
     @Inject(method = "render(Lnet/minecraft/entity/LivingEntity;FFLcom/mojang/blaze3d/matrix/MatrixStack;Lnet/minecraft/client/renderer/IRenderTypeBuffer;I)V",
             at = @At("HEAD"))
     private void rotpNextAlbum$setAgingContext(T entity, float entityYaw, float partialTicks,
-                                                MatrixStack matrixStack, IRenderTypeBuffer buffer,
-                                                int packedLight, CallbackInfo ci) {
+                                               MatrixStack matrixStack, IRenderTypeBuffer buffer,
+                                               int packedLight, CallbackInfo ci) {
         AgingEntityRenderContext.set(entity);
     }
 
     @ModifyArg(method = "render(Lnet/minecraft/entity/LivingEntity;FFLcom/mojang/blaze3d/matrix/MatrixStack;Lnet/minecraft/client/renderer/IRenderTypeBuffer;I)V",
-               at = @At(value = "INVOKE",
-                        target = "Lnet/minecraft/client/renderer/entity/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/matrix/MatrixStack;Lcom/mojang/blaze3d/vertex/IVertexBuilder;IIFFFF)V"),
-               index = 1)
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/entity/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/matrix/MatrixStack;Lcom/mojang/blaze3d/vertex/IVertexBuilder;IIFFFF)V"))
     private IVertexBuilder rotpNextAlbum$wrapLivingModelVertexBuilder(IVertexBuilder original) {
         if (model instanceof PlayerModel) {
             return original;
@@ -46,8 +45,8 @@ public abstract class LivingRendererAgingMixin<T extends LivingEntity, M extends
     @Inject(method = "render(Lnet/minecraft/entity/LivingEntity;FFLcom/mojang/blaze3d/matrix/MatrixStack;Lnet/minecraft/client/renderer/IRenderTypeBuffer;I)V",
             at = @At("RETURN"))
     private void rotpNextAlbum$clearAgingContext(T entity, float entityYaw, float partialTicks,
-                                                  MatrixStack matrixStack, IRenderTypeBuffer buffer,
-                                                  int packedLight, CallbackInfo ci) {
+                                                 MatrixStack matrixStack, IRenderTypeBuffer buffer,
+                                                 int packedLight, CallbackInfo ci) {
         AgingEntityRenderContext.clear();
     }
 }

@@ -30,8 +30,8 @@ import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 
 public class SexPistolsMoveSelectedAction extends StandAction {
-    public static final double ITEM_TARGET_RANGE = 10.0D;
-    private static final double MOVE_MAX_DISTANCE = 10.0D;
+    public static final double ITEM_TARGET_RANGE = 30.0D;
+    private static final double MOVE_MAX_DISTANCE = 30.0D;
     private static final double MOVE_SPEED = 0.36D;
     private static final String ITEM_RETRIEVED_TAG = "rotp_nextalbum_sex_pistols_retrieved";
     private static final Map<UUID, MovingState> MOVING = new ConcurrentHashMap<>();

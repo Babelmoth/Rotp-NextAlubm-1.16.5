@@ -2,13 +2,8 @@ package com.nextalubm.rotp_nextalbum.init;
 
 import com.github.standobyte.jojo.init.ModItems;
 import com.nextalubm.rotp_nextalbum.NextAlubm;
-import com.nextalubm.rotp_nextalbum.item.LuckPluckItem;
-import com.nextalubm.rotp_nextalbum.item.MistaSuitArmorItem;
-import com.nextalubm.rotp_nextalbum.item.NextAlbumArmorMaterials;
-import com.nextalubm.rotp_nextalbum.item.RevolverAmmoItem;
-import com.nextalubm.rotp_nextalbum.item.RevolverCasingItem;
-import com.nextalubm.rotp_nextalbum.item.RevolverItem;
-import com.nextalubm.rotp_nextalbum.item.AjaStoneNecklaceItem;
+import com.nextalubm.rotp_nextalbum.client.render.RevolverGeoRenderer;
+import com.nextalubm.rotp_nextalbum.item.*;
 
 import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.Item;
@@ -20,7 +15,6 @@ import net.minecraftforge.registries.ForgeRegistries;
 public class InitItems {
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, NextAlubm.MOD_ID);
 
-    public static final RegistryObject<Item> REVOLVER = ITEMS.register("revolver", RevolverItem::new);
     public static final RegistryObject<Item> REVOLVER_AMMO = ITEMS.register("revolver_ammo", RevolverAmmoItem::new);
     public static final RegistryObject<Item> REVOLVER_CASING = ITEMS.register("revolver_casing", RevolverCasingItem::new);
     public static final RegistryObject<Item> LUCK_PLUCK = ITEMS.register("luck_pluck", () -> new LuckPluckItem(new Item.Properties().rarity(Rarity.RARE)));
@@ -31,4 +25,29 @@ public class InitItems {
     public static final RegistryObject<Item> MISTA_SUIT_PANTS = ITEMS.register("mista_suit_pants", () -> new MistaSuitArmorItem(NextAlbumArmorMaterials.MISTA_SUIT, EquipmentSlotType.LEGS, "geo/mista_suit_pants.geo.json", "textures/models/armor/mista_suit_pants.png", false, false, false, true));
     public static final RegistryObject<Item> MISTA_SUIT_BOOTS = ITEMS.register("mista_suit_boots", () -> new MistaSuitArmorItem(NextAlbumArmorMaterials.MISTA_SUIT, EquipmentSlotType.FEET, "geo/mista_suit_boots.geo.json", "textures/models/armor/mista_suit_boots.png", false, false, false, true));
     public static final RegistryObject<Item> AJA_STONE_NECKLACE = ITEMS.register("aja_stone_necklace", () -> new AjaStoneNecklaceItem(new Item.Properties().tab(ModItems.MAIN_TAB).rarity(Rarity.RARE)));
+
+    public static final RegistryObject<Item> REVOLVER = ITEMS.register("revolver",
+            () -> new RevolverItem(
+                    new Item.Properties().stacksTo(1).tab(ModItems.MAIN_TAB).setISTER(() -> RevolverGeoRenderer::new),
+                    new RevolverStats.Builder()
+                            .damage(10.0F, 8.0F)
+                            .recoil(5.35F, 1.75F)
+                            .cooldowns(5, 10)
+                            .visuals("revolver")
+                            .build()
+            )
+    );
+
+    public static final RegistryObject<Item> MISTA_REVOLVER = ITEMS.register("mista_revolver",
+            () -> new RevolverItem(
+                    new Item.Properties().stacksTo(1).tab(ModItems.MAIN_TAB).setISTER(() -> RevolverGeoRenderer::new),
+                    new RevolverStats.Builder()
+                            .damage(10.0F, 8.0F)
+                            .recoil(5.35F, 1.75F)
+                            .cooldowns(5, 10)
+                            .visuals("mista_revolver")
+                            .build()
+            )
+    );
+
 }

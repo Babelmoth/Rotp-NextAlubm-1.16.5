@@ -61,9 +61,8 @@ public class SexPistolsRenderer extends StandEntityRenderer<SexPistolsEntity, Se
         matrixStack.pushPose();
         matrixStack.scale(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
         getModel(entity).translateToHand(HandSide.RIGHT, matrixStack);
-        matrixStack.translate(0.02D, 0.04D, -0.02D);
-        matrixStack.mulPose(net.minecraft.util.math.vector.Vector3f.XP.rotationDegrees(-90.0F));
-        matrixStack.scale(0.36F, 0.36F, 0.36F);
+        matrixStack.translate(0D, 0D, 0D);
+        matrixStack.scale(1.0F, 1.0F, 1.0F);
         Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemCameraTransforms.TransformType.THIRD_PERSON_RIGHT_HAND, packedLight, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, matrixStack, buffer);
         matrixStack.popPose();
     }

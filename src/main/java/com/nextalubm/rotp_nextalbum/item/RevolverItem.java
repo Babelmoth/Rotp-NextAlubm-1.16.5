@@ -90,10 +90,16 @@ public class RevolverItem extends Item implements IAnimatable {
     private static final float MELEE_DAMAGE = 1.0F;
     private static final double MELEE_KNOCKBACK = 0.45D;
 
+    private final RevolverStats stats;
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
 
-    public RevolverItem() {
-        super(new Properties().stacksTo(1).tab(ModItems.MAIN_TAB).setISTER(() -> RevolverGeoRenderer::new));
+    public RevolverItem(Properties properties, RevolverStats stats) {
+        super(properties);
+        this.stats = stats;
+    }
+
+    public RevolverStats getStats() {
+        return this.stats;
     }
 
     @Override
@@ -538,11 +544,8 @@ public class RevolverItem extends Item implements IAnimatable {
         return shootBulletWithMask(player, stack, chamber, getPistolMask(stack, chamber), hasEncirclementChamber(stack, chamber), false, false, pitch, yaw);
     }
 
-    // --- 核心修复区域：支持降级射击，绝不卡壳阻止开枪 ---
     private boolean shootBulletWithMask(ServerPlayerEntity player, ItemStack stack, int chamber, int pistolMask, boolean encirclement, boolean piercingShot, boolean splittingShot, float pitch, float yaw) {
         if (!SexPistolsStaminaUtil.consumeBulletFireStamina(player, pistolMask, encirclement, piercingShot, splittingShot)) {
-            // 体力不足且非觉悟状态时，绝不阻止子弹射出！
-            // 自动将附带的性感手枪召回，并剥离所有的特殊射击标志，将其降级为一发普通子弹。
             if (pistolMask != 0) {
                 releasePistolsFromChamber(player, stack, chamber);
             }
@@ -556,15 +559,15 @@ public class RevolverItem extends Item implements IAnimatable {
         bullet.setEncirclementBullet(encirclement);
         bullet.setPiercingShotBullet(piercingShot);
         bullet.setSplittingShotBullet(splittingShot);
-        float inaccuracy = (isAiming(stack) ? 0.3F : 0.9F) * SexPistolsResolveUtil.getBulletInaccuracyMultiplier(player);
+        float finalInaccuracy = (isAiming(stack) ? 0.3F : 0.9F) * SexPistolsResolveUtil.getBulletInaccuracyMultiplier(player) * this.stats.inaccuracy;
         Vector3d direction = Vector3d.directionFromRotation(pitch, yaw);
         Vector3d spawnPos = player.getEyePosition(1.0F).add(direction.scale(BULLET_SPAWN_FORWARD_OFFSET));
         bullet.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
         bullet.xOld = spawnPos.x;
         bullet.yOld = spawnPos.y;
         bullet.zOld = spawnPos.z;
-        bullet.shootFromRotation(player, pitch, yaw, 0.0F, BULLET_SPEED, inaccuracy);
-        bullet.setBaseDamage(piercingShot ? 8.0D : 10.0D);
+        bullet.shootFromRotation(player, pitch, yaw, 0.0F, this.stats.bulletSpeed, finalInaccuracy);
+        bullet.setBaseDamage(piercingShot ? this.stats.piercingDamage : this.stats.baseDamage);
         player.level.addFreshEntity(bullet);
         NetworkHandler.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player), new RevolverMuzzleFlashPacket(player.getId(), isAiming(stack), player.getRandom().nextFloat()));
         player.level.playSound(null, player.blockPosition(), InitSounds.REVOLVER_FIRE.get(), SoundCategory.PLAYERS, 0.95F, 1.0F);
@@ -586,20 +589,22 @@ public class RevolverItem extends Item implements IAnimatable {
 
     @OnlyIn(Dist.CLIENT)
     public static void applyClientRecoil(ItemStack stack) {
+        if (!(stack.getItem() instanceof RevolverItem)) return;
+        RevolverItem gun = (RevolverItem) stack.getItem();
+
         Minecraft mc = Minecraft.getInstance();
         ClientPlayerEntity player = mc.player;
-        if (player == null) {
-            return;
-        }
-        RevolverClientEvents.addRecoil(getPitchRecoil(stack), getYawRecoil(stack, player.getRandom().nextFloat()));
+        if (player == null) return;
+
+        RevolverClientEvents.addRecoil(gun.getPitchRecoil(stack), gun.getYawRecoil(stack, player.getRandom().nextFloat()));
     }
 
-    private static float getPitchRecoil(ItemStack stack) {
-        return RECOIL_PITCH * (isAiming(stack) ? 0.74F : 1.0F);
+    private float getPitchRecoil(ItemStack stack) {
+        return this.stats.recoilPitch * (isAiming(stack) ? 0.74F : 1.0F);
     }
 
-    private static float getYawRecoil(ItemStack stack, float randomValue) {
-        return (randomValue - 0.5F) * RECOIL_YAW * (isAiming(stack) ? 0.55F : 1.0F);
+    private float getYawRecoil(ItemStack stack, float randomValue) {
+        return (randomValue - 0.5F) * this.stats.recoilYaw * (isAiming(stack) ? 0.55F : 1.0F);
     }
 
     private void giveAmmoItem(PlayerEntity player) {
@@ -949,7 +954,7 @@ public class RevolverItem extends Item implements IAnimatable {
     }
 
     public static void applyReloadCooldown(ItemStack stack) {
-        setReloadCooldown(stack, RELOAD_COOLDOWN_TICKS);
+        setReloadCooldown(stack, this.stats.reloadCooldownTicks);
     }
 
     public static void applyReloadCooldown(LivingEntity user, ItemStack stack) {
@@ -961,8 +966,8 @@ public class RevolverItem extends Item implements IAnimatable {
         }
     }
 
-    private static int getShotCooldownTicks(LivingEntity user) {
-        return SexPistolsResolveUtil.getShotCooldownTicks(user, SHOT_COOLDOWN_TICKS);
+    private int getShotCooldownTicks(LivingEntity user) {
+        return SexPistolsResolveUtil.getShotCooldownTicks(user, this.stats.shotCooldownTicks);
     }
 
     @Override

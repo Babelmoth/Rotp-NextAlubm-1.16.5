@@ -73,7 +73,6 @@ public class TheGratefulDeadAgingAuraEffect extends StandEffectInstance {
         if (tickCounter % ENTITY_TICK_INTERVAL == 0) {
             ageTargets(serverWorld, radius, ENTITY_TICK_INTERVAL);
         }
-        //Removed to ensure no crash, wait why it works????????
         agePlantBlockTargets(serverWorld, radius);
     }
 

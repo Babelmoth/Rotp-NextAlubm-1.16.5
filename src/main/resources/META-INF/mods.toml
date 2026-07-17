@@ -36,6 +36,7 @@ issueTrackerURL="https://github.com/Babelmoth/Rotp-NextAlubm-1.16.5/issues/"
     versionRange="[0.2.2,0.3)"
     ordering="AFTER"
     side="BOTH"
+
 [[dependencies.rotp_ata]]
 modId="geckolib3"
 mandatory=true
