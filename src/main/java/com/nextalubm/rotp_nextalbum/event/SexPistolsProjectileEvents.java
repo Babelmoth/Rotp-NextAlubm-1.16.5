@@ -70,7 +70,10 @@ public class SexPistolsProjectileEvents {
         SexPistolsTargetMode targetMode = sexPistols != null ? sexPistols.getTargetMode() : SexPistolsTargetMode.ALL;
         LivingEntity lockedTarget = projectile instanceof RevolverBulletEntity ? ((RevolverBulletEntity) projectile).getSexPistolsLockedTarget(owner, targetMode) : null;
         SexPistolsTransferOrder transferOrder = sexPistols != null ? sexPistols.getTransferOrder() : SexPistolsTransferOrder.NONE;
-        SexPistolsBulletRedirectUtil.RedirectResult redirect = SexPistolsBulletRedirectUtil.getRedirect(projectile.level, owner, standHit, hitPos, motion, targetMode, lockedTarget, transferOrder, projectile instanceof RevolverBulletEntity ? ((RevolverBulletEntity) projectile).getLastSexPistolsTransferStandId() : null);
+        int remainingRedirects = projectile instanceof RevolverBulletEntity
+                ? ((RevolverBulletEntity) projectile).getSexPistolsRedirectBudget() + 1
+                : 1;
+        SexPistolsBulletRedirectUtil.RedirectResult redirect = SexPistolsBulletRedirectUtil.getRedirect(projectile.level, owner, standHit, hitPos, motion, targetMode, lockedTarget, transferOrder, projectile instanceof RevolverBulletEntity ? ((RevolverBulletEntity) projectile).getLastSexPistolsTransferStandId() : null, remainingRedirects);
         redirect = applyRedirect(projectile, standHit, redirect, projectile instanceof RevolverBulletEntity);
         if (redirect == null) {
             event.setCanceled(true);

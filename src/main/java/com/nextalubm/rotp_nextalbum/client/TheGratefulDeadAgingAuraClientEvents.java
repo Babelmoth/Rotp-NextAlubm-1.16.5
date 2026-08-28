@@ -1,21 +1,24 @@
 package com.nextalubm.rotp_nextalbum.client;
 
+import java.util.Optional;
+
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
-import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.nextalubm.rotp_nextalbum.NextAlbumConfig;
 import com.nextalubm.rotp_nextalbum.NextAlubm;
-import com.nextalubm.rotp_nextalbum.init.InitStandEffects;
-import com.nextalubm.rotp_nextalbum.stand.NextAlbumStandStats;
-import com.nextalubm.rotp_nextalbum.util.AgingSpeedUtil;
+import com.nextalubm.rotp_nextalbum.init.InitParticles;
+import com.nextalubm.rotp_nextalbum.stand.TheGratefulDeadAgingAuraEffect;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
-import net.minecraft.client.renderer.FogRenderer;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityViewRenderEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
@@ -25,94 +28,155 @@ public class TheGratefulDeadAgingAuraClientEvents {
     private static final float FOG_COLOR_R = 0.085F;
     private static final float FOG_COLOR_G = 0.080F;
     private static final float FOG_COLOR_B = 0.072F;
-
     private static final float OWNER_AMBIENT_TINT = 0.18F;
+    private static float fogFade;
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onFogColors(EntityViewRenderEvent.FogColors event) {
-        FogState state = currentFogState();
-        if (state == null) {
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
             return;
         }
-        float colorStrength;
-        if (state.viewerIsOwner) {
-            colorStrength = MathHelper.clamp(OWNER_AMBIENT_TINT, 0.0F, 0.4F);
-        } else {
-            colorStrength = MathHelper.clamp(state.strength * 0.92F, 0.0F, 0.96F);
-        }
-        if (colorStrength <= 0.0F) {
-            return;
-        }
-        event.setRed(MathHelper.lerp(colorStrength, event.getRed(), FOG_COLOR_R));
-        event.setGreen(MathHelper.lerp(colorStrength, event.getGreen(), FOG_COLOR_G));
-        event.setBlue(MathHelper.lerp(colorStrength, event.getBlue(), FOG_COLOR_B));
-    }
-
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onRenderFog(EntityViewRenderEvent.RenderFogEvent event) {
-        FogState state = currentFogState();
-        if (state == null || state.viewerIsOwner || state.strength <= 0.0F) {
-            return;
-        }
-        float far = event.getFarPlaneDistance();
-        float fogEnd = MathHelper.lerp(state.strength, far, event.getType() == FogRenderer.FogType.FOG_SKY ? 10.0F : 5.0F);
-        float fogStart = MathHelper.lerp(state.strength, far * 0.62F,
-                event.getType() == FogRenderer.FogType.FOG_SKY ? 0.0F : 0.35F);
-        RenderSystem.fogMode(GlStateManager.FogMode.LINEAR);
-        RenderSystem.fogStart(Math.min(fogStart, fogEnd * 0.85F));
-        RenderSystem.fogEnd(Math.max(fogEnd, 1.0F));
-    }
-
-    private static FogState currentFogState() {
         Minecraft mc = Minecraft.getInstance();
         ClientPlayerEntity viewer = mc.player;
-        Entity camera = mc.getCameraEntity();
-        if (viewer == null || camera == null || mc.level == null || !viewer.isAlive()) {
-            return null;
+        if (viewer == null || mc.level == null) {
+            fogFade = 0.0F;
+            return;
         }
-        boolean viewerIsOwner = isAuraActiveOn(viewer) != null;
-        float strongest = 0.0F;
+        if (mc.isPaused()) {
+            return;
+        }
+        float target = computeFogCoverage(mc);
+        if (target > fogFade) {
+            fogFade = Math.min(target, fogFade + 0.035F);
+        }
+        else {
+            fogFade = Math.max(target, fogFade - 0.05F);
+        }
+
         for (PlayerEntity auraUser : mc.level.players()) {
-            if (auraUser == null || !auraUser.isAlive() || auraUser == viewer) {
+            if (auraUser == null || !auraUser.isAlive()) {
                 continue;
             }
             IStandPower power = isAuraActiveOn(auraUser);
             if (power == null) {
                 continue;
             }
-            double radius = Math.max(1.0D, NextAlbumStandStats.getAbilityRange(power));
-            double distanceSq = camera.distanceToSqr(auraUser);
-            if (distanceSq > radius * radius) {
+            spawnMistParticles(mc, auraUser, power);
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onFogColors(EntityViewRenderEvent.FogColors event) {
+        if (fogFade <= 0.001F) {
+            return;
+        }
+        float colorStrength = OWNER_AMBIENT_TINT * fogFade;
+        event.setRed(MathHelper.lerp(colorStrength, event.getRed(), FOG_COLOR_R));
+        event.setGreen(MathHelper.lerp(colorStrength, event.getGreen(), FOG_COLOR_G));
+        event.setBlue(MathHelper.lerp(colorStrength, event.getBlue(), FOG_COLOR_B));
+    }
+
+    private static float computeFogCoverage(Minecraft mc) {
+        Entity camera = mc.getCameraEntity();
+        if (camera == null || mc.level == null) {
+            return 0.0F;
+        }
+        float strongest = 0.0F;
+        for (PlayerEntity auraUser : mc.level.players()) {
+            if (auraUser == null || !auraUser.isAlive()) {
                 continue;
             }
-            float closeness = 1.0F - MathHelper.sqrt(distanceSq) / (float) radius;
-            float strength = closeness * closeness * (3.0F - 2.0F * closeness);
-            strongest = Math.max(strongest, strength);
+            IStandPower power = isAuraActiveOn(auraUser);
+            if (power == null) {
+                continue;
+            }
+            Optional<TheGratefulDeadAgingAuraEffect> effect = TheGratefulDeadAgingAuraEffect.getActive(power);
+            if (!effect.isPresent()) {
+                continue;
+            }
+            LivingEntity center = TheGratefulDeadAgingAuraEffect.getAuraCenter(auraUser, power);
+            double radius = TheGratefulDeadAgingAuraEffect.getExpandedRadius(power, effect.get().tickCount);
+            if (radius < 1.0D) {
+                radius = Math.max(radius, Math.min(1.25D, effect.get().tickCount * TheGratefulDeadAgingAuraEffect.EXPAND_BLOCKS_PER_TICK * 8.0D));
+            }
+            double dist = camera.distanceTo(center);
+            if (dist > radius) {
+                continue;
+            }
+            float fadeIn = MathHelper.clamp(effect.get().tickCount / 24.0F, 0.0F, 1.0F);
+            float coverage = 1.0F - (float) (dist / Math.max(radius, 0.001D));
+            strongest = Math.max(strongest, fadeIn * (0.65F + 0.35F * coverage));
         }
-        if (!viewerIsOwner && strongest <= 0.0F) {
-            return null;
+        return strongest;
+    }
+
+    private static void spawnMistParticles(Minecraft mc, PlayerEntity auraUser, IStandPower power) {
+        if (!NextAlbumConfig.getCommonConfig(true).agingAuraMistParticles.get()) {
+            return;
         }
-        FogState state = new FogState();
-        state.viewerIsOwner = viewerIsOwner;
-        state.strength = MathHelper.clamp(strongest, 0.0F, 0.98F);
-        return state;
+        World world = mc.level;
+        Entity camera = mc.getCameraEntity();
+        if (world == null || camera == null) {
+            return;
+        }
+        Optional<TheGratefulDeadAgingAuraEffect> effect = TheGratefulDeadAgingAuraEffect.getActive(power);
+        if (!effect.isPresent()) {
+            return;
+        }
+        LivingEntity center = TheGratefulDeadAgingAuraEffect.getAuraCenter(auraUser, power);
+        double radius = TheGratefulDeadAgingAuraEffect.getExpandedRadius(power, effect.get().tickCount);
+        if (radius < 0.35D) {
+            return;
+        }
+        Vector3d centerPos = new Vector3d(center.getX(), center.getY() + center.getBbHeight() * 0.45D, center.getZ());
+        Vector3d camPos = camera.getEyePosition(1.0F);
+        double dist = camPos.distanceTo(centerPos);
+        if (dist > radius + 18.0D) {
+            return;
+        }
+        boolean inside = dist <= radius + 2.0D;
+        if (inside) {
+            if (world.getRandom().nextInt(5) != 0) {
+                return;
+            }
+        }
+        else if (world.getRandom().nextInt(8) != 0) {
+            return;
+        }
+        double x;
+        double y;
+        double z;
+        if (inside) {
+            x = camPos.x + (world.getRandom().nextDouble() - 0.5D) * 16.0D;
+            y = camPos.y + (world.getRandom().nextDouble() - 0.35D) * 3.8D;
+            z = camPos.z + (world.getRandom().nextDouble() - 0.5D) * 16.0D;
+            if (centerPos.distanceToSqr(x, y, z) > radius * radius) {
+                return;
+            }
+        }
+        else {
+            Vector3d toCam = camPos.subtract(centerPos);
+            if (toCam.lengthSqr() < 1.0E-6D) {
+                return;
+            }
+            Vector3d dir = toCam.normalize();
+            double shell = radius * (0.82D + world.getRandom().nextDouble() * 0.16D);
+            x = centerPos.x + dir.x * shell + (world.getRandom().nextDouble() - 0.5D) * 4.0D;
+            y = centerPos.y + (world.getRandom().nextDouble() - 0.2D) * 2.4D;
+            z = centerPos.z + dir.z * shell + (world.getRandom().nextDouble() - 0.5D) * 4.0D;
+        }
+        world.addParticle(InitParticles.AGING_MIST.get(), x, y, z, 0.0D, 0.0D, 0.0D);
     }
 
     private static IStandPower isAuraActiveOn(PlayerEntity player) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || AgingSpeedUtil.isColdBiome(mc.level, player.blockPosition())) {
+        if (mc.level == null) {
             return null;
         }
         IStandPower power = IStandPower.getStandPowerOptional(player).orElse(null);
-        if (power == null || !power.getContinuousEffects()
-                .getEffectOfType(InitStandEffects.THE_GRATEFUL_DEAD_AGING_AURA.get()).isPresent()) {
+        if (!TheGratefulDeadAgingAuraEffect.getActive(power).isPresent()) {
             return null;
         }
         return power;
-    }
-
-    private static final class FogState {
-        boolean viewerIsOwner;
-        float strength;
     }
 }

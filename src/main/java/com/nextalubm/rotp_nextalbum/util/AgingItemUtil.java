@@ -12,7 +12,9 @@ import net.minecraft.block.SaplingBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.item.ItemEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Food;
 import net.minecraft.item.Item;
@@ -125,17 +127,34 @@ public final class AgingItemUtil {
         }
     }
 
+    private static final float ITEM_ENTITY_SYNC_THRESHOLD = 0.015F;
+
     public static void addProgress(ServerWorld world, ItemEntity itemEntity, UUID ownerUuid, float delta) {
         if (itemEntity == null || !itemEntity.isAlive()) {
             return;
         }
         ItemStack stack = itemEntity.getItem();
-        ItemStack agedStack = addProgress(world, itemEntity.blockPosition(), stack, ownerUuid, delta);
-        if (agedStack.isEmpty()) {
-            itemEntity.remove();
+        float oldProgress = getProgress(stack);
+        float newProgress = oldProgress + Math.max(0F, delta);
+        if (newProgress >= MAX_PROGRESS) {
+            ItemStack fullyAged = transformFullyAgedItem(world, itemEntity.blockPosition(), stack);
+            if (fullyAged.isEmpty()) {
+                itemEntity.remove();
+            } else {
+                itemEntity.setItem(fullyAged.copy());
+            }
             return;
         }
-        itemEntity.setItem(agedStack);
+        if (!isAgeableLivingItem(stack)) {
+            return;
+        }
+        if (newProgress - oldProgress >= ITEM_ENTITY_SYNC_THRESHOLD) {
+            ItemStack syncCopy = stack.copy();
+            setProgress(syncCopy, newProgress, ownerUuid);
+            itemEntity.setItem(syncCopy);
+        } else {
+            setProgress(stack, newProgress, ownerUuid);
+        }
     }
 
     public static void addProgress(ServerWorld world, ItemEntity itemEntity, float delta) {
@@ -194,6 +213,86 @@ public final class AgingItemUtil {
         }
     }
 
+    public static boolean hasAging(ItemStack stack) {
+        return getProgress(stack) > 0F;
+    }
+
+    public static int clearProgressOnLiving(LivingEntity living) {
+        if (living == null) {
+            return 0;
+        }
+        int affected = 0;
+        for (EquipmentSlotType slot : EquipmentSlotType.values()) {
+            ItemStack stack = living.getItemBySlot(slot);
+            if (hasAging(stack)) {
+                clearProgress(stack);
+                affected++;
+            }
+        }
+        if (living instanceof PlayerEntity) {
+            affected += clearAllAgedItems((PlayerEntity) living);
+        }
+        return affected;
+    }
+
+    public static int clearHeldAging(LivingEntity living) {
+        if (living == null) {
+            return 0;
+        }
+        int affected = 0;
+        for (Hand hand : Hand.values()) {
+            ItemStack stack = living.getItemInHand(hand);
+            if (hasAging(stack)) {
+                clearProgress(stack);
+                affected++;
+            }
+        }
+        return affected;
+    }
+
+    public static boolean clearDroppedItem(ItemEntity itemEntity) {
+        if (itemEntity == null || !itemEntity.isAlive()) {
+            return false;
+        }
+        ItemStack stack = itemEntity.getItem();
+        if (!hasAging(stack)) {
+            return false;
+        }
+        clearProgress(stack);
+        itemEntity.setItem(stack.copy());
+        return true;
+    }
+
+    private static int clearAllAgedItems(PlayerEntity player) {
+        int affected = 0;
+        for (ItemStack stack : player.inventory.items) {
+            if (hasAging(stack)) {
+                clearProgress(stack);
+                affected++;
+            }
+        }
+        for (ItemStack stack : player.inventory.armor) {
+            if (hasAging(stack)) {
+                clearProgress(stack);
+                affected++;
+            }
+        }
+        for (ItemStack stack : player.inventory.offhand) {
+            if (hasAging(stack)) {
+                clearProgress(stack);
+                affected++;
+            }
+        }
+        if (hasAging(player.inventory.getCarried())) {
+            clearProgress(player.inventory.getCarried());
+            affected++;
+        }
+        if (affected > 0) {
+            player.inventory.setChanged();
+        }
+        return affected;
+    }
+
     private static int clearProgressFromIterable(Iterable<ItemStack> stacks, UUID ownerUuid) {
         int affected = 0;
         for (ItemStack stack : stacks) {
@@ -235,6 +334,12 @@ public final class AgingItemUtil {
     private static ItemStack transformFullyAgedItem(ServerWorld world, BlockPos dustPos, ItemStack original) {
         ItemStack transformed = getTerminalStack(original);
         AgingDustParticleSpawner.spawn(world, dustPos, 18);
+        if (!transformed.isEmpty() && world.random.nextInt(2) == 0) {
+            AgedBlockContactHandler.tryDropPlantAgingDust(world, dustPos);
+        }
+        else if (transformed.isEmpty() && world.random.nextInt(3) != 0) {
+            AgedBlockContactHandler.tryDropPlantAgingDust(world, dustPos);
+        }
         if (transformed.isEmpty()) {
             return ItemStack.EMPTY;
         }

@@ -1,22 +1,13 @@
 package com.nextalubm.rotp_nextalbum.util;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import com.github.standobyte.jojo.init.ModStatusEffects;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
-import com.nextalubm.rotp_nextalbum.NextAlubm;
 import com.nextalubm.rotp_nextalbum.init.InitStands;
 
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 
-@EventBusSubscriber(modid = NextAlubm.MOD_ID, bus = EventBusSubscriber.Bus.FORGE)
 public final class SexPistolsStaminaUtil {
     private static final float NORMAL_FIRE_COST_PER_PISTOL = 40.0F;
     private static final float SPECIAL_FIRE_COST_PER_PISTOL = 50.0F;
@@ -24,9 +15,7 @@ public final class SexPistolsStaminaUtil {
     private static final float KICK_COST = 10.0F;
     private static final float ENCIRCLEMENT_UPKEEP_COST_PER_PISTOL_TICK = 1.35F;
     private static final float QUICK_RELOAD_BULLET_COST = 5.0F;
-    private static final int STAMINA_RECOVERY_PAUSE_TICKS = 10;
     private static final int MAX_QUICK_RELOAD_BULLETS = 6;
-    private static final Map<UUID, Integer> STAMINA_RECOVERY_PAUSES = new HashMap<>();
 
     private SexPistolsStaminaUtil() {}
 
@@ -92,7 +81,7 @@ public final class SexPistolsStaminaUtil {
                 if (power.getStamina() > 0.0F) {
                     power.consumeStamina(power.getStamina());
                 }
-                pauseStaminaRecovery(user);
+                StandStaminaPauseUtil.pause(user);
                 return true;
             }
             return false;
@@ -107,49 +96,9 @@ public final class SexPistolsStaminaUtil {
         }
 
         if (consumed) {
-            pauseStaminaRecovery(user);
+            StandStaminaPauseUtil.pause(user);
         }
         return consumed;
-    }
-
-    @SubscribeEvent
-    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || event.player.level.isClientSide) {
-            return;
-        }
-        UUID playerId = event.player.getUUID();
-        Integer ticks = STAMINA_RECOVERY_PAUSES.get(playerId);
-        if (ticks == null) {
-            return;
-        }
-        suppressStaminaRecovery(event.player);
-        if (ticks <= 1) {
-            STAMINA_RECOVERY_PAUSES.remove(playerId);
-        }
-        else {
-            STAMINA_RECOVERY_PAUSES.put(playerId, ticks - 1);
-        }
-    }
-
-    private static void suppressStaminaRecovery(PlayerEntity player) {
-        Optional<IStandPower> powerOptional = getSexPistolsPower(player);
-        if (!powerOptional.isPresent()) {
-            return;
-        }
-        IStandPower power = powerOptional.get();
-        if (!power.usesStamina() || power.isStaminaInfinite()) {
-            return;
-        }
-        float regen = power.getStaminaTickGain();
-        if (regen > 0.0F) {
-            power.addStamina(-regen, true);
-        }
-    }
-
-    private static void pauseStaminaRecovery(LivingEntity user) {
-        if (user instanceof PlayerEntity && !user.level.isClientSide) {
-            STAMINA_RECOVERY_PAUSES.put(user.getUUID(), STAMINA_RECOVERY_PAUSE_TICKS);
-        }
     }
 
     private static Optional<IStandPower> getSexPistolsPower(LivingEntity user) {

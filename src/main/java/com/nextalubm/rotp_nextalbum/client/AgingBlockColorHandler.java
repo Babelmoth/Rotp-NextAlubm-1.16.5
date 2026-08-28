@@ -18,7 +18,7 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 @EventBusSubscriber(modid = NextAlubm.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class AgingBlockColorHandler {
 
-    static final int WITHER_BROWN = 0x6B4520;
+    static final int WITHER_BROWN = AgingVisualUtil.desaturateRgb(0x6B4520, 0.42F);
     private static final int LILY_PAD_COLOR = 0x208030;
 
     private AgingBlockColorHandler() {

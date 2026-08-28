@@ -6,19 +6,34 @@ import com.github.standobyte.jojo.action.ActionConditionResult;
 import com.github.standobyte.jojo.action.ActionTarget;
 import com.github.standobyte.jojo.action.stand.StandAction;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
+import com.github.standobyte.jojo.util.general.LazySupplier;
+import com.nextalubm.rotp_nextalbum.NextAlubm;
 import com.nextalubm.rotp_nextalbum.init.InitStandEffects;
 import com.nextalubm.rotp_nextalbum.stand.TheGratefulDeadAgingAuraEffect;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.IFormattableTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 
 public class TheGratefulDeadAgingAuraAction extends StandAction {
 
+    private final LazySupplier<ResourceLocation> onTexture;
+    private final LazySupplier<ResourceLocation> offTexture;
+
     public TheGratefulDeadAgingAuraAction(StandAction.Builder builder) {
         super(builder);
+        this.onTexture = new LazySupplier<>(
+                () -> new ResourceLocation(NextAlubm.MOD_ID, "textures/action/the_grateful_dead_aging_aura.png"));
+        this.offTexture = new LazySupplier<>(
+                () -> new ResourceLocation(NextAlubm.MOD_ID, "textures/action/the_grateful_dead_aging_aura_off.png"));
+    }
+
+    @Override
+    public ResourceLocation getIconTexturePath(IStandPower power) {
+        return isAuraActive(power) ? onTexture.get() : offTexture.get();
     }
 
     @Override

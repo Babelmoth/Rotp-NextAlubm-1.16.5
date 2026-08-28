@@ -21,7 +21,6 @@ public class NextAlbumConfig {
 
         private boolean loaded = false;
 
-        // ==================== Revolver Settings ====================
         public final ForgeConfigSpec.DoubleValue bulletDamageMultiplier;
         public final ForgeConfigSpec.BooleanValue isBulletDestroyedBlocks;
         public final ForgeConfigSpec.IntValue blockDamageMemoryTicks;
@@ -29,11 +28,16 @@ public class NextAlbumConfig {
         public final ForgeConfigSpec.DoubleValue closeDamageDropDistance;
         public final ForgeConfigSpec.DoubleValue minDistanceDamage;
         public final ForgeConfigSpec.IntValue maxRicochetCount;
+        public final ForgeConfigSpec.DoubleValue recoilMultiplier;
+        public final ForgeConfigSpec.DoubleValue meleeDamageMultiplier;
 
-        // ==================== General Stands Settings ====================
         public final ForgeConfigSpec.BooleanValue resolveAuraForAllStands;
         public final ForgeConfigSpec.BooleanValue standResolveAura;
-        // ==================== Sex Pistols Settings ====================
+        public final ForgeConfigSpec.BooleanValue onomatopoeiaParticlesEnabled;
+        public final ForgeConfigSpec.BooleanValue resolveAuraOnSummon;
+        public final ForgeConfigSpec.BooleanValue agingAuraMistParticles;
+        public final ForgeConfigSpec.DoubleValue agingSpeedMultiplier;
+        public final ForgeConfigSpec.BooleanValue lastActionForAllStands;
         public final ForgeConfigSpec.DoubleValue sexPistolsTargetSearchRange;
         public final ForgeConfigSpec.DoubleValue sexPistolsTransferAssistRange;
         public final ForgeConfigSpec.IntValue sexPistolsReviveTicks;
@@ -50,7 +54,7 @@ public class NextAlbumConfig {
                 builder.push(mainPath);
             }
 
-            builder.comment(" Settings for Sex Pistols' Revolver bullets.").push("Revolver Settings");
+            builder.comment(" Settings for Revolver bullets.").push("Revolver Settings");
                 bulletDamageMultiplier = builder
                         .comment("    Global damage multiplier applied to all Revolver bullet attacks.",
                                  "    Affects normal shots, Piercing Shot, Splitting Shot, and Encirclement.",
@@ -72,16 +76,16 @@ public class NextAlbumConfig {
                         .defineInRange("blockDamageMemoryTicks", 100, 0, Integer.MAX_VALUE);
                 
                 stableDamageEndDistance = builder
-                        .comment("    The maximum distance which bullets maintain stable damage.",
-                                "     The damage from bullets will decrease by a certain rate beyond this distance.",
-                                "    Defaults to 50.0.")
+                        .comment("    Global stable-range profile for revolver bullets, in blocks.",
+                                "     Multiplies each revolver's registered stable range (default 50).",
+                                "     Damage stays at the revolver's mid-range value until this distance.")
                         .translation("rotp_nextalbum.config.stableDamageEndDistance")
                         .defineInRange("stableDamageEndDistance", 50.0, 0.0, Double.MAX_VALUE);
                 
                 closeDamageDropDistance = builder
-                        .comment("    The maximum distance which bullets can deal extra damage.",
-                                "     Within this range, the damage caused by bullets will be doubled.",
-                                "    Defaults to 5.0.")
+                        .comment("    Global close-range profile for revolver bullets, in blocks.",
+                                "     Multiplies each revolver's registered close range (default 5).",
+                                "     Inside this range, bullets deal extra (close) damage.")
                         .translation("rotp_nextalbum.config.closeDamageDropDistance")
                         .defineInRange("closeDamageDropDistance", 5.0, 0.0, Double.MAX_VALUE);
                 
@@ -96,13 +100,25 @@ public class NextAlbumConfig {
                                 "    Defaults to 2.0.")
                         .translation("rotp_nextalbum.config.maxRicochetCount")
                         .defineInRange("maxRicochetCount", 2, 0, Integer.MAX_VALUE);
+
+                recoilMultiplier = builder
+                        .comment("    Global multiplier applied to revolver camera and visual recoil.",
+                                "    1.0 = default. 0.0 disables recoil.")
+                        .translation("rotp_nextalbum.config.recoilMultiplier")
+                        .defineInRange("recoilMultiplier", 1.0, 0.0, 10.0);
+
+                meleeDamageMultiplier = builder
+                        .comment("    Global multiplier applied to revolver Shift+left-click melee damage.",
+                                "    1.0 = default.")
+                        .translation("rotp_nextalbum.config.meleeDamageMultiplier")
+                        .defineInRange("meleeDamageMultiplier", 1.0, 0.0, 10.0);
             builder.pop();
             
             builder.comment("Stand Settings").push("General Settings");
 
              resolveAuraForAllStands = builder
                     .comment("    Enable resolve aura VFX for all stands.",
-                            "     Default is False (only for Nextalbum Stand)")
+                            "     Default is True (If false, the aura will only for Nextalbum Stand)")
                     .translation("rotp_nextalbum.config.resolveAuraForAllStands")
                     .define("resolveAuraForAllStands", false);
 
@@ -111,6 +127,41 @@ public class NextAlbumConfig {
                             "     Default is true")
                     .translation("rotp_nextalbum.config.standResolveAura")
                     .define("standResolveAura", true);
+
+            onomatopoeiaParticlesEnabled = builder
+                    .comment("    Enable onomatopoeia particles (current only sound particles for step sound. onomatopoeia particles can only seen by Stand Users.).",
+                            "     Default is true")
+                    .translation("rotp_nextalbum.config.onomatopoeiaParticlesEnabled")
+                    .define("onomatopoeiaParticlesEnabled", true);
+
+            resolveAuraOnSummon = builder
+                    .comment("    Show resolve aura VFX when a stand is summoned, even without the resolve effect.",
+                            "     If resolveAuraForAllStands is false, this only affects NextAlbum stands.",
+                            "     Default is false")
+                    .translation("rotp_nextalbum.config.resolveAuraOnSummon")
+                    .define("resolveAuraOnSummon", false);
+
+            agingAuraMistParticles = builder
+                    .comment("    Show The Grateful Dead aging aura mist particles.",
+                            "     Default is true")
+                    .translation("rotp_nextalbum.config.agingAuraMistParticles")
+                    .define("agingAuraMistParticles", true);
+
+            agingSpeedMultiplier = builder
+                    .comment("    Global multiplier applied to The Grateful Dead aging speed.",
+                            "     1.0 = default. Does not bypass the aging-rate window.")
+                    .translation("rotp_nextalbum.config.agingSpeedMultiplier")
+                    .defineInRange("agingSpeedMultiplier", 1.0, 0.0, 10.0);
+
+            lastActionForAllStands = builder
+                    .comment("    When enabled, any stand user has over 1 level resolve can trigger Last-Action.",
+                            "     The Last Action is a mechanism focused on recreating scenes from anime where Stand users sacrifice themselves before their deaths.",
+                            "     When you die during resolve effect, you will enter Last-Action state",
+                            "     Skills stay usable and the timer drains quickly with stamina.",
+                            "     Sex Pistols keep their skills locked and can still pick up items or remote-control stands to help others.",
+                            "     Default is false.")
+                    .translation("rotp_nextalbum.config.unyieldingForSoulUsers")
+                    .define("unyieldingForSoulUsers", false);
 
             builder.push("Sex Pistols Settings");
                 sexPistolsTargetSearchRange = builder
@@ -180,6 +231,14 @@ public class NextAlbumConfig {
             return minDistanceDamage.get();
         }
 
+        public float getRecoilMultiplier() {
+            return recoilMultiplier.get().floatValue();
+        }
+
+        public float getMeleeDamageMultiplier() {
+            return meleeDamageMultiplier.get().floatValue();
+        }
+
         public double getSexPistolsTargetSearchRange() {
             return sexPistolsTargetSearchRange.get();
         }
@@ -190,7 +249,29 @@ public class NextAlbumConfig {
     }
 
 
+    public static class Client {
+        public final ForgeConfigSpec.BooleanValue gunSway;
+        public final ForgeConfigSpec.DoubleValue gunSwaySensitivity;
+        public final ForgeConfigSpec.BooleanValue twoHandedFirstPerson;
+
+        private Client(ForgeConfigSpec.Builder builder) {
+            builder.comment("First-person revolver presentation.").push("Revolver Display");
+            gunSway = builder
+                    .comment("    When looking around, the held revolver lags slightly behind the camera.")
+                    .define("gunSway", true);
+            gunSwaySensitivity = builder
+                    .comment("    How strongly look movement sways the revolver. 0.0 = none, 1.0 = default.")
+                    .defineInRange("gunSwaySensitivity", 0.55, 0.0, 2.0);
+            twoHandedFirstPerson = builder
+                    .comment("    Render both hands on the revolver in first person.")
+                    .define("twoHandedFirstPerson", true);
+            builder.pop();
+        }
+    }
+
     static final ForgeConfigSpec commonSpec;
+    static final ForgeConfigSpec clientSpec;
+    public static final Client CLIENT;
 
     private static final Common COMMON_FROM_FILE;
 
@@ -210,6 +291,11 @@ public class NextAlbumConfig {
         syncedSpec.correct(syncedConfig);
         syncedSpec.setConfig(syncedConfig);
         COMMON_SYNCED_TO_CLIENT = syncedSpecPair.getLeft();
+
+        final Pair<Client, ForgeConfigSpec> clientPair =
+                new ForgeConfigSpec.Builder().configure(Client::new);
+        clientSpec = clientPair.getRight();
+        CLIENT = clientPair.getLeft();
     }
 
  public static Common getCommonConfigInstance(boolean isClientSide) {
@@ -224,8 +310,16 @@ public class NextAlbumConfig {
         COMMON_SYNCED_TO_CLIENT.closeDamageDropDistance.clearCache();
         COMMON_SYNCED_TO_CLIENT.minDistanceDamage.clearCache();
         COMMON_SYNCED_TO_CLIENT.maxRicochetCount.clearCache();
+        COMMON_SYNCED_TO_CLIENT.recoilMultiplier.clearCache();
+        COMMON_SYNCED_TO_CLIENT.meleeDamageMultiplier.clearCache();
 
         COMMON_SYNCED_TO_CLIENT.resolveAuraForAllStands.clearCache();
+        COMMON_SYNCED_TO_CLIENT.standResolveAura.clearCache();
+        COMMON_SYNCED_TO_CLIENT.onomatopoeiaParticlesEnabled.clearCache();
+        COMMON_SYNCED_TO_CLIENT.resolveAuraOnSummon.clearCache();
+        COMMON_SYNCED_TO_CLIENT.agingAuraMistParticles.clearCache();
+        COMMON_SYNCED_TO_CLIENT.agingSpeedMultiplier.clearCache();
+        COMMON_SYNCED_TO_CLIENT.lastActionForAllStands.clearCache();
         COMMON_SYNCED_TO_CLIENT.sexPistolsTargetSearchRange.clearCache();
         COMMON_SYNCED_TO_CLIENT.sexPistolsTransferAssistRange.clearCache();
         COMMON_SYNCED_TO_CLIENT.sexPistolsReviveTicks.clearCache();
@@ -251,6 +345,7 @@ public class NextAlbumConfig {
 
     public static void register(ModLoadingContext context) {
         context.registerConfig(ModConfig.Type.COMMON, commonSpec);
+        context.registerConfig(ModConfig.Type.CLIENT, clientSpec);
     }
 
 

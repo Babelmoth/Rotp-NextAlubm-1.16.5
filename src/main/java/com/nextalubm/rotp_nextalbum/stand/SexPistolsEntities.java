@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 import com.github.standobyte.jojo.action.stand.effect.StandEffectInstance;
@@ -18,14 +19,27 @@ import com.nextalubm.rotp_nextalbum.entity.SexPistolsEntity;
 import com.nextalubm.rotp_nextalbum.init.InitSounds;
 import com.nextalubm.rotp_nextalbum.init.InitStandEffects;
 import com.nextalubm.rotp_nextalbum.init.InitStands;
+import com.nextalubm.rotp_nextalbum.action.SexPistolsForcedTargetAction;
+import com.nextalubm.rotp_nextalbum.network.NetworkHandler;
+import com.nextalubm.rotp_nextalbum.network.SexPistolsForcedTargetsPacket;
+import com.nextalubm.rotp_nextalbum.network.SexPistolsScoutGlowPacket;
+import com.github.standobyte.jojo.power.impl.stand.StandInstance;
+import com.nextalubm.rotp_nextalbum.util.SexPistolsAimUtil;
+import com.nextalubm.rotp_nextalbum.util.SexPistolsForcedTarget;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsTargetMode;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsTransferOrder;
 
+import com.github.standobyte.jojo.action.ActionTarget;
+import com.github.standobyte.jojo.power.impl.stand.IStandPower;
+
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.ListNBT;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraftforge.fml.network.PacketDistributor;
 
 public class SexPistolsEntities extends StandEffectInstance {
     private static final int PISTOL_COUNT = 6;
@@ -42,6 +56,7 @@ public class SexPistolsEntities extends StandEffectInstance {
     private int fedPistolsMask;
     private SexPistolsTargetMode targetMode = SexPistolsTargetMode.PLAYERS;
     private SexPistolsTransferOrder transferOrder = SexPistolsTransferOrder.NONE;
+    private final List<SexPistolsForcedTarget> forcedTargets = new ArrayList<>();
     private final int[] reviveTicks = new int[PISTOL_COUNT];
     private final List<StandEntity> entities = new ArrayList<>();
 
@@ -321,6 +336,83 @@ public class SexPistolsEntities extends StandEffectInstance {
         transferOrder = transferOrder.cycle(backwards);
     }
 
+    public int getForcedTargetCount() {
+        return forcedTargets.size();
+    }
+
+    public List<SexPistolsForcedTarget> getForcedTargets() {
+        return forcedTargets;
+    }
+
+    public List<LivingEntity> getValidForcedEntities() {
+        List<LivingEntity> entities = new ArrayList<>();
+        if (world == null) {
+            return entities;
+        }
+        for (SexPistolsForcedTarget target : forcedTargets) {
+            LivingEntity living = target.getLiving(world);
+            if (living != null && living.isAlive()) {
+                entities.add(living);
+            }
+        }
+        return entities;
+    }
+
+    public List<net.minecraft.util.math.BlockPos> getValidForcedBlocks() {
+        List<net.minecraft.util.math.BlockPos> blocks = new ArrayList<>();
+        if (world == null) {
+            return blocks;
+        }
+        for (SexPistolsForcedTarget target : forcedTargets) {
+            if (target.getKind() == SexPistolsForcedTarget.Kind.BLOCK && target.isValid(world)) {
+                blocks.add(target.getBlockPos());
+            }
+        }
+        return blocks;
+    }
+
+    public boolean toggleForcedTarget(ActionTarget target, IStandPower power) {
+        for (int i = 0; i < forcedTargets.size(); i++) {
+            if (forcedTargets.get(i).matches(target)) {
+                forcedTargets.remove(i);
+                syncForcedTargets();
+                return true;
+            }
+        }
+        SexPistolsForcedTarget next = null;
+        if (target.getType() == ActionTarget.TargetType.ENTITY && target.getEntity() instanceof LivingEntity) {
+            next = SexPistolsForcedTarget.entity((LivingEntity) target.getEntity());
+        }
+        else if (target.getType() == ActionTarget.TargetType.BLOCK && target.getBlockPos() != null) {
+            next = SexPistolsForcedTarget.block(target.getBlockPos());
+        }
+        if (next == null) {
+            return false;
+        }
+        int max = SexPistolsForcedTargetAction.getMaxForcedTargets(power);
+        if (forcedTargets.size() >= max) {
+            return false;
+        }
+        forcedTargets.add(next);
+        syncForcedTargets();
+        return true;
+    }
+
+    public void clearForcedTargets() {
+        if (forcedTargets.isEmpty()) {
+            return;
+        }
+        forcedTargets.clear();
+        syncForcedTargets();
+    }
+
+    public void syncForcedTargets() {
+        if (user instanceof ServerPlayerEntity) {
+            NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) user),
+                    new SexPistolsForcedTargetsPacket(new ArrayList<>(forcedTargets)));
+        }
+    }
+
     public List<Integer> getAvailablePistolIndices() {
         List<Integer> indices = new ArrayList<>();
         for (int i = 0; i < PISTOL_COUNT; i++) {
@@ -509,6 +601,7 @@ public class SexPistolsEntities extends StandEffectInstance {
     protected void tick() {
                 tickSharedHunger();
         tickFoodBeggingAutoSummon();
+        tickForcedTargets();
 for (int i = 0; i < reviveTicks.length; i++) {
             if (reviveTicks[i] > 0) {
                 reviveTicks[i]--;
@@ -533,6 +626,32 @@ for (int i = 0; i < reviveTicks.length; i++) {
         if (sharedHungerTicks <= 0) {
             sharedHungry = true;
             fedPistolsMask = 0;
+        }
+    }
+
+    private void tickForcedTargets() {
+        if (world == null || world.isClientSide()) {
+            return;
+        }
+        boolean removed = forcedTargets.removeIf(target -> !target.isValid(world));
+        if (removed) {
+            syncForcedTargets();
+        }
+        if (user instanceof ServerPlayerEntity && world.getGameTime() % 10L == 0L) {
+            int color = userPower != null && userPower.getType() != null ? userPower.getType().getColor() : 0xe75d2f;
+            Optional<net.minecraft.util.ResourceLocation> skin = userPower != null
+                    ? userPower.getStandInstance().flatMap(StandInstance::getSelectedSkin) : Optional.empty();
+            for (LivingEntity living : getValidForcedEntities()) {
+                NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) user),
+                        new SexPistolsScoutGlowPacket(living.getId(), 30, color, skin));
+            }
+            if (targetMode == SexPistolsTargetMode.AIM) {
+                LivingEntity aim = SexPistolsAimUtil.findAimTarget(user, userPower);
+                if (aim != null) {
+                    NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) user),
+                            new SexPistolsScoutGlowPacket(aim.getId(), 20, color, skin));
+                }
+            }
         }
     }
 
@@ -577,6 +696,11 @@ for (int i = 0; i < reviveTicks.length; i++) {
         nbt.putInt("SharedHungerTicks", sharedHungerTicks);
         nbt.putBoolean("SharedHungry", sharedHungry);
         nbt.putInt("FedPistolsMask", fedPistolsMask);
+        ListNBT forced = new ListNBT();
+        for (SexPistolsForcedTarget target : forcedTargets) {
+            forced.add(target.save());
+        }
+        nbt.put("ForcedTargets", forced);
     }
 
     @Override
@@ -591,5 +715,10 @@ for (int i = 0; i < reviveTicks.length; i++) {
         sharedHungerTicks = nbt.contains("SharedHungerTicks") ? nbt.getInt("SharedHungerTicks") : randomHungerTicks();
         sharedHungry = nbt.getBoolean("SharedHungry");
         fedPistolsMask = nbt.getInt("FedPistolsMask") & ((1 << PISTOL_COUNT) - 1);
+        forcedTargets.clear();
+        ListNBT forced = nbt.getList("ForcedTargets", 10);
+        for (int i = 0; i < forced.size(); i++) {
+            forcedTargets.add(SexPistolsForcedTarget.load(forced.getCompound(i)));
+        }
     }
 }

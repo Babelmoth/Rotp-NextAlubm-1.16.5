@@ -37,13 +37,30 @@ issueTrackerURL="https://github.com/Babelmoth/Rotp-NextAlubm-1.16.5/issues/"
     ordering="AFTER"
     side="BOTH"
 
-[[dependencies.rotp_ata]]
-modId="geckolib3"
-mandatory=true
-versionRange="[3.0.0,)"
-ordering="NONE"
-side="BOTH"
+[[dependencies.rotp_nextalbum]]
+    modId="geckolib3"
+    mandatory=true
+    versionRange="[3.0.0,)"
+    ordering="NONE"
+    side="BOTH"
 
+[[dependencies.rotp_nextalbum]]
+    modId="curios"
+    mandatory=false
+    versionRange="[0,)"
+    ordering="NONE"
+    side="BOTH"
 
-[[mixins]]
-    config="rotp_nextalbum.mixins.json"
+[[dependencies.rotp_nextalbum]]
+    modId="cold_sweat"
+    mandatory=false
+    versionRange="[0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.rotp_nextalbum]]
+    modId="survive"
+    mandatory=false
+    versionRange="[0,)"
+    ordering="NONE"
+    side="BOTH"

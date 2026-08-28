@@ -1,0 +1,23 @@
+{
+  "parent": "jojo:jojo/summon_stand",
+  "display": {
+    "icon": {
+      "item": "rotp_nextalbum:spirit_cigarette"
+    },
+    "title": {
+      "translate": "advancements.rotp_nextalbum.jotaro_trick.title"
+    },
+    "description": {
+      "translate": "advancements.rotp_nextalbum.jotaro_trick.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "jotaro_trick": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

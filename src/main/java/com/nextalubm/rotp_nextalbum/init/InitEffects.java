@@ -2,7 +2,9 @@ package com.nextalubm.rotp_nextalbum.init;
 
 import com.nextalubm.rotp_nextalbum.NextAlubm;
 import com.nextalubm.rotp_nextalbum.potion.CollapseEffect;
+import com.nextalubm.rotp_nextalbum.potion.FocusEffect;
 import com.nextalubm.rotp_nextalbum.potion.JoyfulEffect;
+import com.nextalubm.rotp_nextalbum.potion.LaxEffect;
 
 import net.minecraft.potion.Effect;
 import net.minecraftforge.fml.RegistryObject;
@@ -14,4 +16,6 @@ public class InitEffects {
 
     public static final RegistryObject<JoyfulEffect> JOYFUL = EFFECTS.register("joyful", JoyfulEffect::new);
     public static final RegistryObject<CollapseEffect> COLLAPSE = EFFECTS.register("collapse", CollapseEffect::new);
+    public static final RegistryObject<FocusEffect> FOCUS = EFFECTS.register("focus", FocusEffect::new);
+    public static final RegistryObject<LaxEffect> LAX = EFFECTS.register("lax", LaxEffect::new);
 }

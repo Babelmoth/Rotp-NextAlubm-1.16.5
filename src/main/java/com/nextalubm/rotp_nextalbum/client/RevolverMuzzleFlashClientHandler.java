@@ -15,6 +15,10 @@ public final class RevolverMuzzleFlashClientHandler {
     }
 
     public static void spawn(int entityId, boolean aiming, float random) {
+        spawn(entityId, aiming, random, false);
+    }
+
+    public static void spawn(int entityId, boolean aiming, float random, boolean critical) {
         Minecraft mc = Minecraft.getInstance();
         World world = mc.level;
         if (world == null) {
@@ -52,13 +56,16 @@ public final class RevolverMuzzleFlashClientHandler {
         Vector3d muzzle = eye.add(look.scale(forwardOffset)).add(right.scale(sideOffset)).add(up.scale(upOffset));
         double spread = aiming ? 0.014D : 0.028D;
         Vector3d flashVelocity = look.scale(0.035D + random * 0.025D);
-        world.addParticle(InitParticles.REVOLVER_MUZZLE_FLASH.get(), muzzle.x, muzzle.y, muzzle.z, flashVelocity.x, flashVelocity.y, flashVelocity.z);
+        net.minecraft.particles.IParticleData flash = critical
+                ? InitParticles.KICK_MUZZLE_FLASH_CRITICAL.get()
+                : InitParticles.REVOLVER_MUZZLE_FLASH.get();
+        world.addParticle(flash, muzzle.x, muzzle.y, muzzle.z, flashVelocity.x, flashVelocity.y, flashVelocity.z);
         for (int i = 0; i < 2; i++) {
             double angle = random * Math.PI * 2.0D + i * Math.PI;
             Vector3d offset = right.scale(Math.cos(angle) * spread).add(up.scale(Math.sin(angle) * spread));
             Vector3d pos = muzzle.add(offset).add(look.scale(0.035D * i));
             Vector3d velocity = look.scale(0.025D).add(offset.scale(0.35D));
-            world.addParticle(InitParticles.REVOLVER_MUZZLE_FLASH.get(), pos.x, pos.y, pos.z, velocity.x, velocity.y, velocity.z);
+            world.addParticle(flash, pos.x, pos.y, pos.z, velocity.x, velocity.y, velocity.z);
         }
         world.addParticle(ParticleTypes.POOF, muzzle.x - look.x * 0.05D, muzzle.y - look.y * 0.05D, muzzle.z - look.z * 0.05D, look.x * 0.015D, look.y * 0.015D, look.z * 0.015D);
         world.addParticle(ParticleTypes.SMOKE, muzzle.x - look.x * 0.10D, muzzle.y - look.y * 0.10D, muzzle.z - look.z * 0.10D, look.x * 0.01D, look.y * 0.01D + 0.006D, look.z * 0.01D);

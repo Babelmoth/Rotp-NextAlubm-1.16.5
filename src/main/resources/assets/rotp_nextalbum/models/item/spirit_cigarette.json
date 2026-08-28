@@ -1,0 +1,11 @@
+{
+  "parent": "rotp_nextalbum:item/spirit_cigarette_3d",
+  "overrides": [
+    {
+      "predicate": {
+        "rotp_nextalbum:lit": 1
+      },
+      "model": "rotp_nextalbum:item/spirit_cigarette_burning"
+    }
+  ]
+}

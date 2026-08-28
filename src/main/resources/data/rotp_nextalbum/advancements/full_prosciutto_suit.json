@@ -1,0 +1,58 @@
+{
+  "parent": "jojo:jojo/summon_stand",
+  "criteria": {
+    "has_prosciutto_boots": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "item": "rotp_nextalbum:prosciutto_suit_boots"
+          }
+        ]
+      }
+    },
+    "has_prosciutto_pants": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "item": "rotp_nextalbum:prosciutto_suit_pants"
+          }
+        ]
+      }
+    },
+    "has_prosciutto_cloth": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "item": "rotp_nextalbum:prosciutto_suit_cloth"
+          }
+        ]
+      }
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "translate": "advancements.rotp_nextalbum.full_prosciutto_suit.description"
+    },
+    "frame": "task",
+    "hidden": false,
+    "icon": {
+      "item": "rotp_nextalbum:prosciutto_suit_cloth"
+    },
+    "show_toast": true,
+    "title": {
+      "translate": "advancements.rotp_nextalbum.full_prosciutto_suit.title"
+    }
+  },
+  "requirements": [
+    ["has_prosciutto_cloth"],
+    ["has_prosciutto_pants"],
+    ["has_prosciutto_boots"]
+  ],
+  "rewards": {
+    "experience": 200
+  }
+}

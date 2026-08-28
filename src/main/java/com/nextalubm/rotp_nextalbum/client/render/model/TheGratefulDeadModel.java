@@ -5,9 +5,14 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.github.standobyte.jojo.action.stand.StandEntityAction;
+import com.github.standobyte.jojo.client.render.entity.animnew.stand.StandPoseData;
 import com.github.standobyte.jojo.client.render.entity.bb.EntityModelUnbaked;
 import com.github.standobyte.jojo.client.render.entity.bb.ParseGeckoModel;
 import com.github.standobyte.jojo.client.render.entity.model.stand.HumanoidStandModel;
@@ -19,12 +24,17 @@ import com.github.standobyte.jojo.client.render.entity.pose.anim.barrage.StandTw
 import com.github.standobyte.jojo.entity.stand.StandPose;
 import com.github.standobyte.jojo.power.impl.stand.StandInstance.StandPart;
 import com.github.standobyte.jojo.util.general.MathUtil;
+import com.github.standobyte.jojo.client.render.entity.pose.ModelPose;
+import com.github.standobyte.jojo.client.render.entity.pose.ModelPoseTransitionMultiple;
+import com.github.standobyte.jojo.client.render.entity.pose.RotationAngle;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.nextalubm.rotp_nextalbum.NextAlubm;
+import com.nextalubm.rotp_nextalbum.client.ClientGrabState;
 import com.nextalubm.rotp_nextalbum.entity.TheGratefulDeadEntity;
+import com.nextalubm.rotp_nextalbum.stand.TheGratefulDeadStandPose;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.model.ModelRenderer;
@@ -39,9 +49,12 @@ public class TheGratefulDeadModel extends HumanoidStandModel<TheGratefulDeadEnti
     private static final String IDLE_NAME = "idle";
     private static final String JAB_NAME = "jab";
     private static final String STRONG_PUNCH_NAME = "strongPunch";
+    private static final String FINISHER_NAME = "finisher";
     private static final String BARRAGE_NAME = "barrage";
     private static final String BLOCK_NAME = "block";
     private static final String LOWER_TORSO_NAME = "lower_torso";
+
+    private static final String SUMMON_NAME = "summon";
 
     private final Map<ModelRenderer, PartTransform> defaultTransforms = new HashMap<>();
     private JsonObject animationsJson;
@@ -86,6 +99,26 @@ public class TheGratefulDeadModel extends HumanoidStandModel<TheGratefulDeadEnti
     }
 
     @Override
+    public void poseStand(TheGratefulDeadEntity entity, StandPoseData pose, float ticks, float yRotOffsetDeg, float xRotDeg) {
+        if (entity != null && entity.isSummonAnimationActive()
+                && pose.standPose != TheGratefulDeadEntity.IDLE_RANDOM_POSE
+                && pose.standPose != TheGratefulDeadStandPose.GRAB) {
+            float partialTick = ticks - entity.tickCount;
+            float summonTicks = MathHelper.clamp(entity.getSummonAnimationSeconds(partialTick) * 10.0F, 0.0F, 20.0F);
+            super.poseStand(entity, StandPoseData.start().standPose(StandPose.SUMMON).end(), summonTicks, yRotOffsetDeg, xRotDeg);
+            return;
+        }
+        super.poseStand(entity, pose, ticks, yRotOffsetDeg, xRotDeg);
+    }
+
+    @Override
+    protected List<IModelPose<TheGratefulDeadEntity>> initSummonPoses() {
+        List<IModelPose<TheGratefulDeadEntity>> poses = new ArrayList<>();
+        poses.add(new JsonSummonPose());
+        return poses;
+    }
+
+    @Override
     protected IModelPose<TheGratefulDeadEntity> initBaseIdlePose() {
         return new JsonIdlePose(false);
     }
@@ -99,10 +132,11 @@ public class TheGratefulDeadModel extends HumanoidStandModel<TheGratefulDeadEnti
     protected void initActionPoses() {
         super.initActionPoses();
         actionAnim.put(StandPose.LIGHT_ATTACK, new JabActionAnim());
-        actionAnim.put(StandPose.HEAVY_ATTACK, new OneShotActionAnim(STRONG_PUNCH_NAME, 0.91F, 1.0F));
-        actionAnim.put(StandPose.HEAVY_ATTACK_FINISHER, new OneShotActionAnim(STRONG_PUNCH_NAME, 0.91F, 1.0F));
+        actionAnim.put(StandPose.HEAVY_ATTACK, new OneShotActionAnim(STRONG_PUNCH_NAME, 0.6F, 1.0F));
+        actionAnim.put(StandPose.HEAVY_ATTACK_FINISHER, new OneShotActionAnim(FINISHER_NAME, 0.5F, 0.75F));
         actionAnim.put(StandPose.BLOCK, new StaticPoseAnim(BLOCK_NAME));
         actionAnim.put(StandPose.BARRAGE, new RightHandOnlyBarrageAnimation(this, new JsonBarrageLoopPose(), idlePose));
+        actionAnim.put(TheGratefulDeadStandPose.GRAB, new GrabOverlayAnimation());
     }
 
     @Override
@@ -134,6 +168,41 @@ public class TheGratefulDeadModel extends HumanoidStandModel<TheGratefulDeadEnti
             setSecondXRot(rightArm, xRotRad);
         }
     }
+
+    private void trackRightArmXRot(float xRotRad) {
+        if (rightArm != null) {
+            setSecondXRot(rightArm, xRotRad);
+        }
+    }
+
+    private void trackLeftArmXRot(float xRotRad) {
+        if (leftArm != null) {
+            setSecondXRot(leftArm, xRotRad);
+        }
+    }
+
+    private void applyLeftArmLookFollow(float yRotOffsetRad, float xRotRad) {
+        if (leftArm != null) {
+            leftArm.yRot += yRotOffsetRad;
+            setSecondXRot(leftArm, xRotRad);
+        }
+        if (leftForeArm != null) {
+            leftForeArm.yRot += yRotOffsetRad * 0.35F;
+        }
+    }
+
+    private void overlayGrabLeftArm(float yRotOffsetRad, float xRotRad) {
+        applyJsonPose("grab", 0.0F, 1.0F, yRotOffsetRad, xRotRad, false);
+        applyLeftArmLookFollow(yRotOffsetRad, xRotRad);
+    }
+
+    private static boolean isStandGrabbing(TheGratefulDeadEntity entity) {
+        if (entity == null || entity.getUser() == null) {
+            return false;
+        }
+        return ClientGrabState.isUserGrabbing(entity.getUser().getId());
+    }
+
 
     private JsonObject getAnimation(String name) {
         if (animationsJson == null) {
@@ -306,9 +375,36 @@ public class TheGratefulDeadModel extends HumanoidStandModel<TheGratefulDeadEnti
             if (rotationAmount <= 0.0F) {
                 return;
             }
+
             float length = animationLength(IDLE_NAME);
             float seconds = loopTarget && length > 0.0F ? length * 0.5F : 0.0F;
             applyJsonPose(IDLE_NAME, seconds, rotationAmount, yRotOffsetRad, xRotRad, true);
+        }
+
+        @Override
+        public IModelPose<TheGratefulDeadEntity> setEasing(UnaryOperator<Float> function) {
+            this.easing = function;
+            return this;
+        }
+    }
+
+    private class JsonSummonPose implements IModelPose<TheGratefulDeadEntity> {
+        private UnaryOperator<Float> easing = amount -> amount;
+
+        @Override
+        public void poseModel(float rotationAmount, TheGratefulDeadEntity entity, float ticks, float yRotOffsetRad, float xRotRad, HandSide side) {
+            rotationAmount = easing.apply(rotationAmount);
+            if (rotationAmount <= 0.0F) {
+                return;
+            }
+            float seconds;
+            if (entity != null && entity.isSummonAnimationActive()) {
+                seconds = entity.getSummonAnimationSeconds(ticks - entity.tickCount);
+            }
+            else {
+                seconds = ticks / 20.0F;
+            }
+            applyJsonPose(SUMMON_NAME, seconds, rotationAmount, yRotOffsetRad, xRotRad, true);
         }
 
         @Override
@@ -330,7 +426,10 @@ public class TheGratefulDeadModel extends HumanoidStandModel<TheGratefulDeadEnti
             float t = MathHelper.clamp(easing.apply(rotationAmount), 0.0F, 0.999999F);
             float seconds = t * length;
             applyJsonPose(BARRAGE_NAME, seconds, 1.0F, yRotOffsetRad, xRotRad, false);
-            trackArmsXRot(xRotRad);
+            trackRightArmXRot(xRotRad);
+            if (isStandGrabbing(entity)) {
+                overlayGrabLeftArm(yRotOffsetRad, xRotRad);
+            }
         }
 
         @Override
@@ -367,7 +466,8 @@ public class TheGratefulDeadModel extends HumanoidStandModel<TheGratefulDeadEnti
                 return;
             }
             int combo = entity != null ? Math.max(entity.punchComboCount, 1) : 1;
-            boolean leftPunch = (combo % 2) == 0;
+            boolean grabbing = isStandGrabbing(entity);
+            boolean leftPunch = !grabbing && (combo % 2) == 0;
             float sectionStart = leftPunch ? SECTION_LEN : 0.0F;
             float t;
             if (phase == null) {
@@ -391,7 +491,10 @@ public class TheGratefulDeadModel extends HumanoidStandModel<TheGratefulDeadEnti
             }
             float seconds = sectionStart + MathHelper.clamp(t, 0.0F, 1.0F) * SECTION_LEN;
             applyJsonPose(JAB_NAME, seconds, 1.0F, yRotOffsetRad, xRotRad, false);
-            trackArmsXRot(xRotRad);
+            trackRightArmXRot(xRotRad);
+            if (grabbing) {
+                overlayGrabLeftArm(yRotOffsetRad, xRotRad);
+            }
         }
     }
 
@@ -433,7 +536,10 @@ public class TheGratefulDeadModel extends HumanoidStandModel<TheGratefulDeadEnti
                 }
             }
             applyJsonPose(name, MathHelper.clamp(t, 0.0F, 1.0F) * length, 1.0F, yRotOffsetRad, xRotRad, false);
-            trackArmsXRot(xRotRad);
+            trackRightArmXRot(xRotRad);
+            if (isStandGrabbing(entity)) {
+                overlayGrabLeftArm(yRotOffsetRad, xRotRad);
+            }
         }
     }
 
@@ -447,7 +553,37 @@ public class TheGratefulDeadModel extends HumanoidStandModel<TheGratefulDeadEnti
         @Override
         public void animate(StandEntityAction.Phase phase, float phaseCompletion, TheGratefulDeadEntity entity, float ticks, float yRotOffsetRad, float xRotRad, HandSide side) {
             applyJsonPose(name, 0.0F, 1.0F, yRotOffsetRad, xRotRad, false);
-            trackArmsXRot(xRotRad);
+            trackRightArmXRot(xRotRad);
+        }
+    }
+
+    private class GrabOverlayAnimation implements IActionAnimation<TheGratefulDeadEntity> {
+        @Override
+        public void animate(StandEntityAction.Phase phase, float phaseCompletion, TheGratefulDeadEntity entity,
+                float ticks, float yRotOffsetRad, float xRotRad, HandSide side) {
+            applyJsonPose("grab", 0.0F, 1.0F, yRotOffsetRad, xRotRad, false);
+            applyLeftArmLookFollow(yRotOffsetRad, xRotRad);
+        }
+    }
+
+    private class LoopActionAnim implements IActionAnimation<TheGratefulDeadEntity> {
+        private final String name;
+
+        private LoopActionAnim(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public void animate(StandEntityAction.Phase phase, float phaseCompletion, TheGratefulDeadEntity entity, float ticks, float yRotOffsetRad, float xRotRad, HandSide side) {
+            float length = animationLength(name);
+            float seconds;
+            if (length > 0.0F) {
+                seconds = (ticks % (length * 20.0F)) / 20.0F;
+            } else {
+                seconds = 0.0F;
+            }
+            applyJsonPose(name, seconds, 1.0F, yRotOffsetRad, xRotRad, false);
+            trackRightArmXRot(xRotRad);
         }
     }
 

@@ -15,7 +15,7 @@ public class MistaHatAmmoEvents {
     public static void onLivingDrops(LivingDropsEvent event) {
         for (ItemEntity drop : event.getDrops()) {
             ItemStack stack = drop.getItem();
-            if (MistaSuitArmorItem.isMistaHat(stack)) {
+            if (MistaSuitArmorItem.isAmmoContainer(stack)) {
                 MistaSuitArmorItem.dropStoredAmmo(stack, drop.level, drop.getX(), drop.getY(), drop.getZ());
                 drop.setItem(stack);
             }

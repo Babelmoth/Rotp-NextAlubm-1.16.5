@@ -130,6 +130,10 @@
     "sounds": ["rotp_nextalbum:item/revolver/fire"],
     "subtitle": "rotp_nextalbum.subtitle.fire"
   },
+  "revolver_shot": {
+    "sounds": ["rotp_nextalbum:item/revolver/revolver_shot"],
+    "subtitle": "rotp_nextalbum.subtitle.fire"
+  },
   "dry_fire": {
     "sounds": ["rotp_nextalbum:item/revolver/dry_fire"],
     "subtitle": "rotp_nextalbum.subtitle.dry_fire"
@@ -210,16 +214,136 @@
       }
     ]
   },
-  "the_grateful_dead": {
+  "prosciutto_the_grateful_dead": {
     "sounds": [
-      "rotp_nextalbum:stand_user/the_grateful_dead"
+      "rotp_nextalbum:stand_user/prosciutto_the_grateful_dead"
     ],
-    "subtitle": "rotp_nextalbum.subtitle.the_grateful_dead"
+    "subtitle": "rotp_nextalbum.subtitle.prosciutto_the_grateful_dead"
   },
-  "grateful_dead": {
+  "the_grateful_dead_summon": {
     "sounds": [
-      "rotp_nextalbum:stand_user/grateful_dead"
+      "rotp_nextalbum:stand/the_greateful_dead_summon"
     ],
-    "subtitle": "rotp_nextalbum.subtitle.grateful_dead"
+    "subtitle": "rotp_nextalbum.subtitle.the_grateful_dead_summon"
+  },
+  "the_grateful_dead_summon_2": {
+    "sounds": [
+      "rotp_nextalbum:stand/the_greateful_dead_summon_2"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.the_grateful_dead_summon"
+  },
+  "the_grateful_dead_unsummon": {
+    "sounds": [
+      "rotp_nextalbum:stand/the_greateful_dead_unsummon"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.the_grateful_dead_unsummon"
+  },
+  "prosciutto_dead": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/prosciutto_dead"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.prosciutto_dead"
+  },
+  "prosciutto_kill": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/prosciutto_kill"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.prosciutto_kill"
+  },
+  "prosciutto_muda": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/prosciutto_muda"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.prosciutto_muda"
+  },
+  "prosciutto_take_this": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/prosciutto_take_this"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.prosciutto_take_this"
+  },
+  "prosciutto_ora": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/prosciutto_ora"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.prosciutto_ora"
+  },
+  "prosciutto_noisy": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/prosciutto_noisy"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.prosciutto_noisy"
+  },
+  "pesci_summon": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/pesci_summon"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.pesci_summon"
+  },
+  "pesci_summon_2": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/pesci_summon_2"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.pesci_summon"
+  },
+  "beach_boy_summon": {
+    "sounds": [
+      "rotp_nextalbum:stand/beach_boy_summon"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.beach_boy_summon"
+  },
+  "beach_boy_unsummon": {
+    "sounds": [
+      "rotp_nextalbum:stand/beach_boy_unsummon"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.beach_boy_unsummon"
+  },
+  "beach_boy_reel_back": {
+    "sounds": [
+      "rotp_nextalbum:stand/beach_boy_reel_back"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.beach_boy_reel_back"
+  },
+  "pesci_get_mob": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/pesci_get_mob"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.pesci_get_mob"
+  },
+  "pesci_get_mob_full": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/pesci_get_mob_full"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.pesci_get_mob"
+  },
+  "pesci_reel_you_in": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/pesci_reel_you_in"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.pesci_reel_you_in"
+  },
+  "pesci_wont_let_it_happen": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/pesci_wont_let_it_happen"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.pesci_wont_let_it_happen"
+  },
+  "pesci_brother": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/pesci_brother"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.pesci_brother"
+  },
+  "pesci_kill_you": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/pesci_kill_you"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.pesci_kill_you"
+  },
+  "pesci_lost_target": {
+    "sounds": [
+      "rotp_nextalbum:stand_user/pesci_lost_target"
+    ],
+    "subtitle": "rotp_nextalbum.subtitle.pesci_lost_target"
   }
 }

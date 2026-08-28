@@ -8,21 +8,23 @@ import javax.annotation.Nullable;
 
 import com.github.standobyte.jojo.client.ClientUtil;
 import com.github.standobyte.jojo.init.ModItems;
+import com.github.standobyte.jojo.power.impl.stand.IStandPower;
+import com.github.standobyte.jojo.power.impl.stand.ResolveCounter;
 import com.nextalubm.rotp_nextalbum.NextAlubm;
 import com.nextalubm.rotp_nextalbum.client.render.MistaSuitArmorRenderer;
-import com.nextalubm.rotp_nextalbum.init.InitItems;
 
 import net.minecraft.client.entity.player.AbstractClientPlayerEntity;
 import net.minecraft.client.renderer.entity.model.BipedModel;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.item.ItemEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.ArmorItem;
 import net.minecraft.item.IArmorMaterial;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.DamageSource;
 import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.KeybindTextComponent;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
@@ -31,17 +33,14 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraft.util.DamageSource;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.manager.AnimationData;
 import software.bernie.geckolib3.core.manager.AnimationFactory;
 import software.bernie.geckolib3.util.GeckoLibUtil;
 
 @EventBusSubscriber(modid = NextAlubm.MOD_ID, bus = EventBusSubscriber.Bus.FORGE)
-
 public class MistaSuitArmorItem extends ArmorItem implements IAnimatable {
-    private static final String STORED_AMMO_KEY = "StoredRevolverAmmo";
-    private static final int MAX_STORED_AMMO = 256;
+    public static final int THEME_COLOR = 0xe75d2f;
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
     private final String modelPath;
     private final String texturePath;
@@ -59,7 +58,7 @@ public class MistaSuitArmorItem extends ArmorItem implements IAnimatable {
     }
 
     public MistaSuitArmorItem(IArmorMaterial material, EquipmentSlotType slot, String modelPath, String texturePath, @Nullable String slimModelPath, @Nullable String slimTexturePath, boolean hideHatOverlay, boolean hideBodyOverlay, boolean hideArmOverlays, boolean hideLegOverlays) {
-        super(material, slot, new Properties().stacksTo(1).tab(ModItems.MAIN_TAB));
+        super(material, slot, new Properties().stacksTo(1).tab(ModItems.MAIN_TAB).setNoRepair());
         this.modelPath = modelPath;
         this.texturePath = texturePath;
         this.slimModelPath = slimModelPath;
@@ -98,100 +97,174 @@ public class MistaSuitArmorItem extends ArmorItem implements IAnimatable {
         return hideLegOverlays;
     }
 
-    public static boolean isMistaHat(ItemStack stack) {
-        return !stack.isEmpty() && stack.getItem() instanceof MistaSuitArmorItem && ((MistaSuitArmorItem) stack.getItem()).getSlot() == EquipmentSlotType.HEAD;
+    public static boolean isMistaSuit(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() instanceof MistaSuitArmorItem;
+    }
 
+    public static boolean isMistaHat(ItemStack stack) {
+        return isAmmoSlot(stack, EquipmentSlotType.HEAD);
+    }
+
+    public static boolean isMistaBoots(ItemStack stack) {
+        return isAmmoSlot(stack, EquipmentSlotType.FEET);
+    }
+
+    public static boolean isSpeedloaderReady(LivingEntity entity) {
+        return entity != null
+                && (isMistaHat(entity.getItemBySlot(EquipmentSlotType.HEAD))
+                || isMistaBoots(entity.getItemBySlot(EquipmentSlotType.FEET)));
+    }
+
+    public static boolean isAmmoContainer(ItemStack stack) {
+        return isMistaHat(stack) || isMistaBoots(stack);
+    }
+
+    private static boolean isAmmoSlot(ItemStack stack, EquipmentSlotType slot) {
+        return isMistaSuit(stack) && ((MistaSuitArmorItem) stack.getItem()).getSlot() == slot;
+    }
+
+    public static int countPieces(LivingEntity entity) {
+        if (entity == null) {
+            return 0;
+        }
+        int count = 0;
+        for (ItemStack armorStack : entity.getArmorSlots()) {
+            if (isMistaSuit(armorStack)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public static boolean hasFullSet(LivingEntity entity) {
+        return countPieces(entity) >= 4;
+    }
+
+    @Override
+    public boolean canBeDepleted() {
+        return false;
+    }
+
+    @Override
+    public boolean isValidRepairItem(ItemStack toRepair, ItemStack repair) {
+        return false;
+    }
+
+    @Override
+    public void inventoryTick(ItemStack stack, World world, net.minecraft.entity.Entity entity, int slot, boolean selected) {
+        super.inventoryTick(stack, world, entity, slot, selected);
+        CharacterSuitTooltips.applyUnbreakable(stack);
     }
 
     @Override
     @OnlyIn(Dist.CLIENT)
     public void appendHoverText(ItemStack stack, @Nullable World world, List<ITextComponent> tooltip, ITooltipFlag flag) {
-        if (isMistaHat(stack)) {
-        tooltip.add(new TranslationTextComponent("item.nextalbum.mista_hat.tooltips").withStyle(TextFormatting.GRAY));
-        }
-        if (!isMistaHat(stack)){
-            tooltip.add(new TranslationTextComponent("item.nextalbum.mista_suit.tooltips").withStyle(TextFormatting.GRAY));
+        net.minecraft.client.entity.player.ClientPlayerEntity player = net.minecraft.client.Minecraft.getInstance().player;
+        int worn = countPieces(player);
+        tooltip.add(CharacterSuitTooltips.effectLine(THEME_COLOR,
+                "item.nextalbum.suit.effect.narrow_escape", worn, 4,
+                "item.nextalbum.suit.effect.narrow_escape.desc"));
+        if (isAmmoContainer(stack)) {
+            tooltip.add(CharacterSuitTooltips.effectLine(THEME_COLOR,
+                    "item.nextalbum.suit.effect.bullet_storage",
+                    isAmmoContainer(player == null ? ItemStack.EMPTY : player.getItemBySlot(getSlot())) ? 1 : 0, 1,
+                    "item.nextalbum.suit.effect.bullet_storage.desc"));
+            tooltip.add(CharacterSuitTooltips.effectLine(THEME_COLOR,
+                    "item.nextalbum.suit.effect.speedloader", 1, 1,
+                    "item.nextalbum.suit.effect.speedloader.desc"));
+            tooltip.add(new TranslationTextComponent("item.nextalbum.suit.effect.bullet_storage.count",
+                    getStoredAmmo(stack), AmmoBundleUtil.MAX_OCCUPANCY).withStyle(TextFormatting.BLUE));
         }
         ClientUtil.addItemReferenceQuote(tooltip, this);
     }
 
     public static boolean isAmmoItem(ItemStack stack) {
-        return !stack.isEmpty() && stack.getItem() == InitItems.REVOLVER_AMMO.get();
+        return AmmoBundleUtil.isAmmoItem(stack);
     }
 
     public static int getStoredAmmo(ItemStack stack) {
-        return isMistaHat(stack) ? Math.max(0, Math.min(MAX_STORED_AMMO, stack.getOrCreateTag().getInt(STORED_AMMO_KEY))) : 0;
+        return isAmmoContainer(stack) ? AmmoBundleUtil.getOccupancy(stack) : 0;
     }
 
     public static int getMaxStoredAmmo() {
-        return MAX_STORED_AMMO;
+        return AmmoBundleUtil.MAX_OCCUPANCY;
     }
 
     public static List<ItemStack> getStoredAmmoStacks(ItemStack stack) {
-        List<ItemStack> stacks = new ArrayList<>();
-        int stored = getStoredAmmo(stack);
-        while (stored > 0 && stacks.size() < 4) {
-            int count = Math.min(stored, InitItems.REVOLVER_AMMO.get().getMaxStackSize());
-            stacks.add(new ItemStack(InitItems.REVOLVER_AMMO.get(), count));
-            stored -= count;
-        }
-        return stacks;
+        return isAmmoContainer(stack) ? AmmoBundleUtil.getContents(stack) : new ArrayList<ItemStack>();
     }
 
     public static int getRemainingAmmoCapacity(ItemStack stack) {
-        return Math.max(0, MAX_STORED_AMMO - getStoredAmmo(stack));
+        return isAmmoContainer(stack) ? AmmoBundleUtil.getRemainingCapacity(stack) : 0;
     }
 
-    public static int insertAmmo(ItemStack hatStack, ItemStack ammoStack) {
-        if (!isMistaHat(hatStack) || !isAmmoItem(ammoStack)) {
+    public static int insertAmmo(ItemStack container, ItemStack ammoStack) {
+        return isAmmoContainer(container) ? AmmoBundleUtil.insert(container, ammoStack) : 0;
+    }
+
+    public static int extractAmmoToSlot(ItemStack container, ItemStack targetSlotStack) {
+        return isAmmoContainer(container) ? AmmoBundleUtil.extractInto(container, targetSlotStack) : 0;
+    }
+
+    public static boolean consumeOneAmmo(ItemStack container) {
+        return consumeAmmo(container, 1) > 0;
+    }
+
+    public static int consumeAmmo(ItemStack container, int amount) {
+        return isAmmoContainer(container) ? AmmoBundleUtil.consume(container, amount) : 0;
+    }
+
+    public static ItemStack removeAmmoStack(ItemStack container) {
+        return isAmmoContainer(container) ? AmmoBundleUtil.removeOneStack(container) : ItemStack.EMPTY;
+    }
+
+    public static void dropStoredAmmo(ItemStack container, World world, double x, double y, double z) {
+        if (isAmmoContainer(container)) {
+            AmmoBundleUtil.dropContents(container, world, x, y, z);
+        }
+    }
+
+    public static int consumeAmmoFromPlayer(PlayerEntity player, int amount) {
+        if (player == null || amount <= 0) {
             return 0;
         }
-        int moved = Math.min(ammoStack.getCount(), getRemainingAmmoCapacity(hatStack));
-        if (moved <= 0) {
+        int remaining = amount;
+        remaining -= consumeFromList(player.inventory.armor, remaining);
+        if (remaining > 0) {
+            remaining -= consumeFromList(player.inventory.items, remaining);
+        }
+        if (remaining > 0) {
+            remaining -= consumeFromList(player.inventory.offhand, remaining);
+        }
+        return amount - remaining;
+    }
+
+    public static int countStoredAmmoOnPlayer(PlayerEntity player) {
+        if (player == null) {
             return 0;
         }
-        setStoredAmmo(hatStack, getStoredAmmo(hatStack) + moved);
-        ammoStack.shrink(moved);
-        return moved;
+        int total = 0;
+        for (ItemStack stack : player.inventory.armor) {
+            total += getStoredAmmo(stack);
+        }
+        for (ItemStack stack : player.inventory.items) {
+            total += getStoredAmmo(stack);
+        }
+        for (ItemStack stack : player.inventory.offhand) {
+            total += getStoredAmmo(stack);
+        }
+        return total;
     }
 
-    public static boolean consumeOneAmmo(ItemStack hatStack) {
-        int stored = getStoredAmmo(hatStack);
-        if (stored <= 0) {
-            return false;
+    private static int consumeFromList(Iterable<ItemStack> stacks, int amount) {
+        int remaining = amount;
+        for (ItemStack stack : stacks) {
+            if (remaining <= 0) {
+                break;
+            }
+            remaining -= consumeAmmo(stack, remaining);
         }
-        setStoredAmmo(hatStack, stored - 1);
-        return true;
-    }
-
-    public static ItemStack removeAmmoStack(ItemStack hatStack) {
-        int stored = getStoredAmmo(hatStack);
-        if (stored <= 0) {
-            return ItemStack.EMPTY;
-        }
-        int removed = Math.min(stored, InitItems.REVOLVER_AMMO.get().getMaxStackSize());
-        setStoredAmmo(hatStack, stored - removed);
-        return new ItemStack(InitItems.REVOLVER_AMMO.get(), removed);
-    }
-
-    public static void dropStoredAmmo(ItemStack hatStack, World world, double x, double y, double z) {
-        if (world == null || world.isClientSide) {
-            return;
-        }
-        for (ItemStack storedStack : getStoredAmmoStacks(hatStack)) {
-            world.addFreshEntity(new ItemEntity(world, x, y, z, storedStack));
-        }
-        setStoredAmmo(hatStack, 0);
-    }
-
-    private static void setStoredAmmo(ItemStack stack, int amount) {
-        int clamped = Math.max(0, Math.min(MAX_STORED_AMMO, amount));
-        if (clamped <= 0) {
-            stack.removeTagKey(STORED_AMMO_KEY);
-        }
-        else {
-            stack.getOrCreateTag().putInt(STORED_AMMO_KEY, clamped);
-        }
+        return amount - remaining;
     }
 
     @SubscribeEvent
@@ -200,11 +273,9 @@ public class MistaSuitArmorItem extends ArmorItem implements IAnimatable {
         DamageSource source = event.getSource();
 
         boolean isRevolverBullet = "revolver_bullet".equals(source.getMsgId());
-
         boolean isProjectile = source.isProjectile();
 
         if (isRevolverBullet || isProjectile) {
-
             int suitPiecesCount = 0;
             for (ItemStack armorStack : entity.getArmorSlots()) {
                 if (!armorStack.isEmpty() && armorStack.getItem() instanceof MistaSuitArmorItem) {
@@ -213,25 +284,30 @@ public class MistaSuitArmorItem extends ArmorItem implements IAnimatable {
             }
 
             if (suitPiecesCount > 0) {
-
                 float reductionFactor = suitPiecesCount * 0.15F;
-
                 float currentDamage = event.getAmount();
                 float newDamage = currentDamage * (1.0F - reductionFactor);
-
                 event.setAmount(newDamage);
+            }
+            if (suitPiecesCount >= 4 && entity instanceof PlayerEntity && !entity.level.isClientSide) {
+                IStandPower power = IStandPower.getStandPowerOptional(entity).orElse(null);
+                if (power != null && power.hasPower()) {
+                    LivingEntity attacker = source.getEntity() instanceof LivingEntity
+                            ? (LivingEntity) source.getEntity() : entity;
+                    ResolveCounter.addResolve(power, attacker, Math.max(1.0F, event.getAmount()));
+                }
             }
         }
     }
 
     @Override
     public boolean showDurabilityBar(ItemStack stack) {
-        return isMistaHat(stack) && getStoredAmmo(stack) > 0;
+        return isAmmoContainer(stack) && getStoredAmmo(stack) > 0;
     }
 
     @Override
     public double getDurabilityForDisplay(ItemStack stack) {
-        return 1.0D - Math.max(0.0D, Math.min(1.0D, (double) getStoredAmmo(stack) / (double) MAX_STORED_AMMO));
+        return 1.0D - Math.max(0.0D, Math.min(1.0D, (double) getStoredAmmo(stack) / (double) AmmoBundleUtil.MAX_OCCUPANCY));
     }
 
     @Override
@@ -268,7 +344,7 @@ public class MistaSuitArmorItem extends ArmorItem implements IAnimatable {
 
     @Override
     public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
-        if (isMistaHat(stack) && getStoredAmmo(stack) > 0 && (entity.isInLava() || entity.isOnFire())) {
+        if (isAmmoContainer(stack) && getStoredAmmo(stack) > 0 && (entity.isInLava() || entity.isOnFire())) {
             dropStoredAmmo(stack, entity.level, entity.getX(), entity.getY(), entity.getZ());
             entity.setItem(stack);
         }
@@ -277,10 +353,10 @@ public class MistaSuitArmorItem extends ArmorItem implements IAnimatable {
 
     @Override
     public <T extends LivingEntity> int damageItem(ItemStack stack, int amount, T entity, Consumer<T> onBroken) {
-        if (isMistaHat(stack) && amount > 0 && stack.getDamageValue() + amount >= stack.getMaxDamage()) {
+        if (isAmmoContainer(stack) && amount > 0 && getStoredAmmo(stack) > 0) {
             dropStoredAmmo(stack, entity.level, entity.getX(), entity.getY(), entity.getZ());
         }
-        return amount;
+        return 0;
     }
 
     @Override

@@ -58,12 +58,12 @@ public class RevolverClientEvents {
         if (event.isAttack() && player.isShiftKeyDown() && !RevolverItem.isReloadMode(stack)) {
             NetworkHandler.CHANNEL.sendToServer(new RevolverMeleeAttackPacket());
             adsAttackLatched = Minecraft.getInstance().options.keyAttack.isDown();
-            event.setSwingHand(false);
+            event.setSwingHand(true);
             event.setCanceled(true);
             return;
         }
         if (RevolverItem.isReloadMode(stack)) {
-            if (event.isAttack()) {
+            if (event.isAttack() || (event.isUseItem() && !RevolverItem.canReload(player, stack))) {
                 event.setSwingHand(false);
                 event.setCanceled(true);
             }
@@ -72,8 +72,10 @@ public class RevolverClientEvents {
         if (!event.isAttack()) {
             return;
         }
-        fireRevolver(stack);
-        adsAttackLatched = Minecraft.getInstance().options.keyAttack.isDown();
+        if (RevolverItem.canFire(stack)) {
+            fireRevolver(player, stack);
+            adsAttackLatched = Minecraft.getInstance().options.keyAttack.isDown();
+        }
         event.setSwingHand(false);
         event.setCanceled(true);
     }
@@ -90,6 +92,10 @@ public class RevolverClientEvents {
         }
         ItemStack stack = player.getMainHandItem();
         if (!(stack.getItem() instanceof RevolverItem) || !RevolverItem.isReloadMode(stack)) {
+            return;
+        }
+        if (!RevolverItem.canReload(player, stack)) {
+            event.setCanceled(true);
             return;
         }
         boolean forward = event.getScrollDelta() > 0.0D;
@@ -118,6 +124,9 @@ public class RevolverClientEvents {
         }
         ItemStack stack = player.getMainHandItem();
         if (stack.getItem() instanceof RevolverItem) {
+            if (!RevolverItem.canReload(player, stack)) {
+                return;
+            }
             RevolverItem.setReloadMode(stack, !RevolverItem.isReloadMode(stack));
             RevolverItem.setAiming(stack, false);
             player.stopUsingItem();
@@ -129,12 +138,15 @@ public class RevolverClientEvents {
     public static void onFovModifier(EntityViewRenderEvent.FOVModifier event) {
         Minecraft mc = Minecraft.getInstance();
         ClientPlayerEntity player = mc.player;
+        if (player == null) {
+            aimZoomModifier = 1.0F;
+            return;
+        }
+        ItemStack stack = player.getMainHandItem();
         float targetZoom = 1.0F;
-        if (player != null) {
-            ItemStack stack = player.getMainHandItem();
-            if (isLocalPlayerAiming(player, stack)) {
-                targetZoom = RevolverItem.getAimZoomModifier();
-            }
+        if (stack.getItem() instanceof RevolverItem) {
+            float ads = RevolverClientAnim.getAimProgress(mc.getFrameTime());
+            targetZoom = 1.0F + (RevolverItem.getAimZoomModifier(stack) - 1.0F) * ads;
         }
         float speed = targetZoom > aimZoomModifier ? AIM_ZOOM_IN_SPEED : AIM_ZOOM_OUT_SPEED;
         float lerpFactor = MathHelper.clamp(mc.getDeltaFrameTime() * speed, 0.0F, 1.0F);
@@ -165,8 +177,8 @@ public class RevolverClientEvents {
         boolean aiming = isLocalPlayerAiming(player, stack);
         boolean attackDown = mc.options.keyAttack.isDown();
         if (aiming && attackDown && mc.screen == null) {
-            if (!adsAttackLatched) {
-                fireRevolver(stack);
+            if (!adsAttackLatched && RevolverItem.canFire(stack)) {
+                fireRevolver(player, stack);
                 adsAttackLatched = true;
             }
         }
@@ -194,11 +206,12 @@ public class RevolverClientEvents {
                 || input.areControlsLockedForHotbar(Hotbar.RIGHT_CLICK));
     }
 
-    private static void fireRevolver(ItemStack stack) {
-        if (RevolverItem.isReloadMode(stack)) {
+    private static void fireRevolver(ClientPlayerEntity player, ItemStack stack) {
+        if (!RevolverItem.canFire(stack)) {
             return;
         }
         NetworkHandler.CHANNEL.sendToServer(new ShootRevolverPacket());
+        RevolverItem.setShotCooldown(stack, ((RevolverItem) stack.getItem()).getShotCooldownTicks(player));
         if (RevolverItem.hasBullet(stack, RevolverItem.getSelectedChamber(stack))) {
             RevolverItem.applyClientRecoil(stack);
         }

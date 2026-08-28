@@ -165,12 +165,13 @@ public final class AgedBlockContactHandler {
             return;
         }
         world.removeBlock(pos, false);
-        dropPlantAgingDust(world, pos);
+        tryDropPlantAgingDust(world, pos);
         AgingDustParticleSpawner.spawn(world, pos, 18);
         AgingBlockTracker.clearAt(world, pos);
     }
-    private static void dropPlantAgingDust(ServerWorld world, BlockPos pos) {
-        if (world.random.nextInt(3) != 0) {
+
+    public static void tryDropPlantAgingDust(ServerWorld world, BlockPos pos) {
+        if (world.random.nextInt(4) == 0) {
             return;
         }
         ItemEntity item = new ItemEntity(world, pos.getX() + 0.5D, pos.getY() + 0.25D, pos.getZ() + 0.5D,

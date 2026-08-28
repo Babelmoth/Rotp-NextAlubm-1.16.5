@@ -9,6 +9,9 @@ import com.github.standobyte.jojo.power.impl.stand.IStandManifestation;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
 import com.nextalubm.rotp_nextalbum.NextAlubm;
 import com.nextalubm.rotp_nextalbum.init.InitEffects;
+import com.nextalubm.rotp_nextalbum.util.AgingEntityUtil;
+import com.nextalubm.rotp_nextalbum.util.BeachBoyPathSwim;
+import com.nextalubm.rotp_nextalbum.util.TheGratefulDeadGrabUtil;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.Pose;
@@ -53,11 +56,34 @@ public class StaggeredEffectEventHandler {
             lockSwimmingPose(player);
         }
         else if (COLLAPSE_SWIMMING_LOCKED.remove(player.getUUID()) && player.getForcedPose() == Pose.SWIMMING) {
-            player.setForcedPose(null);
+            if (!BeachBoyPathSwim.isActive(player) && !AgingEntityUtil.isForcedSwim(player)) {
+                player.setForcedPose(null);
+                player.setSwimming(false);
+                if (player.getPose() == Pose.SWIMMING && !player.isInWater()) {
+                    player.setPose(Pose.STANDING);
+                }
+                player.refreshDimensions();
+            }
         }
     }
 
     private static void lockSwimmingPose(LivingEntity entity) {
+        if (TheGratefulDeadGrabUtil.isEntityGrabbed(entity)) {
+            if (BeachBoyPathSwim.isActive(entity) || AgingEntityUtil.isForcedSwim(entity)) {
+                return;
+            }
+            entity.setSwimming(false);
+            if (entity instanceof PlayerEntity) {
+                PlayerEntity player = (PlayerEntity) entity;
+                COLLAPSE_SWIMMING_LOCKED.add(player.getUUID());
+                player.setForcedPose(null);
+                if (player.getPose() == Pose.SWIMMING && !player.isInWater()) {
+                    player.setPose(Pose.STANDING);
+                }
+                player.refreshDimensions();
+            }
+            return;
+        }
         entity.setSwimming(true);
         entity.setPose(Pose.SWIMMING);
         if (entity instanceof PlayerEntity) {
@@ -65,5 +91,6 @@ public class StaggeredEffectEventHandler {
             COLLAPSE_SWIMMING_LOCKED.add(player.getUUID());
             player.setForcedPose(Pose.SWIMMING);
         }
+        entity.refreshDimensions();
     }
 }

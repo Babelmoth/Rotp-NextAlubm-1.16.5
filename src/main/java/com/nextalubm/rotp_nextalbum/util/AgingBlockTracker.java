@@ -42,6 +42,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Direction;
 import net.minecraft.util.RegistryKey;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.IBlockReader;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.fml.network.PacketDistributor;
@@ -134,6 +135,27 @@ public final class AgingBlockTracker {
         return entry == null ? 0F : entry.progress;
     }
 
+    public static float getVegetationHardnessMultiplier(BlockState state, IBlockReader world, BlockPos pos) {
+        if (state == null || world == null || pos == null || !isAgeable(state)) {
+            return 1.0F;
+        }
+        float progress = getProgressAny(world, pos);
+        if (progress <= 0F) {
+            return 1.0F;
+        }
+        return 1.0F - 0.82F * Math.min(1.0F, progress);
+    }
+
+    private static float getProgressAny(IBlockReader world, BlockPos pos) {
+        if (world instanceof ServerWorld) {
+            return getProgressAt((ServerWorld) world, pos);
+        }
+        if (world instanceof World && ((World) world).isClientSide()) {
+            return com.nextalubm.rotp_nextalbum.client.AgingBlockClientCache.getProgress(pos);
+        }
+        return 0F;
+    }
+
     public static void applyAgingToDroppedSelfItem(ServerWorld world, BlockPos pos, BlockState state, ItemStack stack) {
         if (world == null || pos == null || state == null || stack.isEmpty()) {
             return;
@@ -173,128 +195,6 @@ public final class AgingBlockTracker {
         }
         return Math.max(0F, applied);
     }
-
-    public static float addAuraUnitProgress(ServerWorld world, BlockPos unitPos, UUID ownerUuid, float progress) {
-        if (world == null || unitPos == null || progress <= 0F) {
-            return 0F;
-        }
-        BlockState state = world.getBlockState(unitPos);
-        float delta = Math.max(0F, Math.min(MAX_PROGRESS, progress));
-        float applied = applyToSingleBlock(world, unitPos, ownerUuid, unitPos, delta, 1.0F);
-        if (applied < 0F) {
-            return 0F;
-        }
-        Block block = state.getBlock();
-        if (isTreePart(state)) {
-            spreadTree(world, unitPos, ownerUuid, delta);
-        }
-        else if (block instanceof CactusBlock || block instanceof SugarCaneBlock
-                || block instanceof BambooBlock || block instanceof BambooSaplingBlock) {
-            spreadVerticalColumn(world, unitPos, block, ownerUuid, delta,
-                    AgingBlockTracker::sameKindOrBambooFamily);
-        }
-        else if (isVerticalVineLike(block)) {
-            spreadVerticalColumn(world, unitPos, block, ownerUuid, delta,
-                    AgingBlockTracker::vineFamilyCompatible);
-        }
-        else if (block instanceof VineBlock) {
-            spreadConnected(world, unitPos, ownerUuid, delta,
-                    p -> world.getBlockState(p).getBlock() instanceof VineBlock,
-                    VINE_BFS_LIMIT);
-        }
-        else if (block instanceof DoublePlantBlock) {
-            DoubleBlockHalf half = state.getValue(DoublePlantBlock.HALF);
-            BlockPos otherPos = half == DoubleBlockHalf.LOWER ? unitPos.above() : unitPos.below();
-            applyToSingleBlock(world, otherPos, ownerUuid, unitPos, delta, 1.0F);
-        }
-        return Math.max(0F, applied);
-    }
-
-    public static BlockPos getAuraAgingUnitPos(ServerWorld world, BlockPos pos, BlockState state) {
-        if (pos == null) {
-            return BlockPos.ZERO;
-        }
-        if (world == null || state == null) {
-            return pos.immutable();
-        }
-        Block b = state.getBlock();
-        if (b instanceof DoublePlantBlock) {
-            DoubleBlockHalf half = state.getValue(DoublePlantBlock.HALF);
-            return (half == DoubleBlockHalf.LOWER ? pos : pos.below()).immutable();
-        }
-        if (b instanceof CactusBlock || b instanceof SugarCaneBlock
-                || b instanceof BambooBlock || b instanceof BambooSaplingBlock) {
-            return findVerticalColumnBase(world, pos, b, AgingBlockTracker::sameKindOrBambooFamily);
-        }
-        if (isVerticalVineLike(b)) {
-            return findVerticalColumnBase(world, pos, b, AgingBlockTracker::vineFamilyCompatible);
-        }
-        if (isTreePart(state)) {
-            return findTreeAnchor(world, pos, state);
-        }
-        return pos.immutable();
-    }
-
-    private static BlockPos findVerticalColumnBase(ServerWorld world, BlockPos pos, Block centreBlock,
-                                                   BiPredicate<Block, Block> compatible) {
-        BlockPos cursor = pos.immutable();
-        while (cursor.getY() > 0) {
-            BlockPos below = cursor.below();
-            if (!world.hasChunk(below.getX() >> 4, below.getZ() >> 4)
-                    || !compatible.test(world.getBlockState(below).getBlock(), centreBlock)) {
-                break;
-            }
-            cursor = below;
-        }
-        return cursor.immutable();
-    }
-
-    private static BlockPos findTreeAnchor(ServerWorld world, BlockPos pos, BlockState state) {
-        BlockPos logPos = BlockTags.LOGS.contains(state.getBlock()) ? pos.immutable() : findNearbyLog(world, pos);
-        if (logPos == null) {
-            return pos.immutable();
-        }
-        return findLowestConnectedLog(world, logPos);
-    }
-
-    private static BlockPos findLowestConnectedLog(ServerWorld world, BlockPos seed) {
-        Set<BlockPos> visited = new HashSet<>();
-        Deque<BlockPos> queue = new ArrayDeque<>();
-        BlockPos start = seed.immutable();
-        BlockPos best = start;
-        queue.add(start);
-        visited.add(start);
-        while (!queue.isEmpty() && visited.size() <= LEAF_LOG_SEARCH_LIMIT) {
-            BlockPos pos = queue.poll();
-            if (compareTreeAnchor(pos, best) < 0) {
-                best = pos;
-            }
-            for (Direction d : Direction.values()) {
-                BlockPos n = pos.relative(d);
-                if (visited.contains(n) || !world.hasChunk(n.getX() >> 4, n.getZ() >> 4)) {
-                    continue;
-                }
-                BlockState ns = world.getBlockState(n);
-                if (BlockTags.LOGS.contains(ns.getBlock())) {
-                    BlockPos imm = n.immutable();
-                    visited.add(imm);
-                    queue.add(imm);
-                }
-            }
-        }
-        return best.immutable();
-    }
-
-    private static int compareTreeAnchor(BlockPos a, BlockPos b) {
-        if (a.getY() != b.getY()) {
-            return Integer.compare(a.getY(), b.getY());
-        }
-        if (a.getX() != b.getX()) {
-            return Integer.compare(a.getX(), b.getX());
-        }
-        return Integer.compare(a.getZ(), b.getZ());
-    }
-
 
     public static float addProgress(ServerWorld world, BlockPos targetPos, UUID ownerUuid,
                                     BlockPos centerPos, float delta) {
@@ -577,12 +477,14 @@ public final class AgingBlockTracker {
         if (state.is(BlockTags.FLOWERS)) {
             if (b != Blocks.WITHER_ROSE) {
                 world.setBlock(pos, Blocks.WITHER_ROSE.defaultBlockState(), 3);
+                AgedBlockContactHandler.tryDropPlantAgingDust(world, pos);
                 removeEntry(world, pos);
             }
             return;
         }
         if (state.is(BlockTags.SAPLINGS)) {
             world.setBlock(pos, Blocks.DEAD_BUSH.defaultBlockState(), 3);
+            AgedBlockContactHandler.tryDropPlantAgingDust(world, pos);
             removeEntry(world, pos);
             return;
         }
@@ -597,6 +499,7 @@ public final class AgingBlockTracker {
         BlockPos upperPos = lowerPos.above();
         world.setBlock(upperPos, Blocks.AIR.defaultBlockState(), 2);
         world.setBlock(lowerPos, Blocks.WITHER_ROSE.defaultBlockState(), 3);
+        AgedBlockContactHandler.tryDropPlantAgingDust(world, lowerPos);
         removeEntry(world, lowerPos);
         removeEntry(world, upperPos);
     }
@@ -724,6 +627,160 @@ public final class AgingBlockTracker {
             affected += startFadeForOwner(world, player.getUUID(), fadeDurationTicks);
         }
         return affected;
+    }
+
+    public static boolean startFadeAt(ServerWorld world, BlockPos pos, int fadeDurationTicks) {
+        if (world == null || pos == null) {
+            return false;
+        }
+        boolean faded = startFadeSingle(world, pos.immutable(), fadeDurationTicks);
+        fadeSpreadFromCentre(world, pos.immutable(), fadeDurationTicks);
+        return faded;
+    }
+
+    private static void fadeSpreadFromCentre(ServerWorld world, BlockPos centre, int fadeDurationTicks) {
+        BlockState centreState = world.getBlockState(centre);
+        Block centreBlock = centreState.getBlock();
+        if (isTreePart(centreState)) {
+            fadeTree(world, centre, fadeDurationTicks);
+            return;
+        }
+        if (centreBlock instanceof CactusBlock || centreBlock instanceof SugarCaneBlock
+                || centreBlock instanceof BambooBlock || centreBlock instanceof BambooSaplingBlock) {
+            fadeVerticalColumn(world, centre, centreBlock, fadeDurationTicks,
+                    AgingBlockTracker::sameKindOrBambooFamily);
+            return;
+        }
+        if (isVerticalVineLike(centreBlock)) {
+            fadeVerticalColumn(world, centre, centreBlock, fadeDurationTicks,
+                    AgingBlockTracker::vineFamilyCompatible);
+            return;
+        }
+        if (centreBlock instanceof VineBlock) {
+            fadeConnected(world, centre, fadeDurationTicks,
+                    p -> world.getBlockState(p).getBlock() instanceof VineBlock,
+                    VINE_BFS_LIMIT);
+            return;
+        }
+        if (centreBlock instanceof DoublePlantBlock && centreState.hasProperty(DoublePlantBlock.HALF)) {
+            DoubleBlockHalf half = centreState.getValue(DoublePlantBlock.HALF);
+            BlockPos otherPos = half == DoubleBlockHalf.LOWER ? centre.above() : centre.below();
+            startFadeSingle(world, otherPos.immutable(), fadeDurationTicks);
+        }
+        if (isSmallGroundPlant(centreBlock)) {
+            BlockPos belowGrass = findGrassBlockBelow(world, centre);
+            if (belowGrass != null) {
+                startFadeSingle(world, belowGrass.immutable(), fadeDurationTicks);
+                fadePlantRadius(world, belowGrass, fadeDurationTicks);
+                return;
+            }
+            fadePlantRadius(world, centre, fadeDurationTicks);
+            return;
+        }
+        if (centreBlock instanceof GrassBlock || centreBlock instanceof MyceliumBlock) {
+            fadePlantRadius(world, centre, fadeDurationTicks);
+        }
+    }
+
+    private static void fadeTree(ServerWorld world, BlockPos centre, int fadeDurationTicks) {
+        Set<BlockPos> visited = new HashSet<>();
+        Deque<BlockPos> queue = new ArrayDeque<>();
+        queue.add(centre.immutable());
+        visited.add(centre.immutable());
+        while (!queue.isEmpty() && visited.size() <= TREE_BFS_LIMIT) {
+            BlockPos pos = queue.poll();
+            if (!pos.equals(centre)) {
+                startFadeSingle(world, pos, fadeDurationTicks);
+            }
+            for (Direction dir : Direction.values()) {
+                BlockPos neighbour = pos.relative(dir);
+                if (visited.contains(neighbour) || !world.hasChunk(neighbour.getX() >> 4, neighbour.getZ() >> 4)) {
+                    continue;
+                }
+                if (!isTreePart(world.getBlockState(neighbour))) {
+                    continue;
+                }
+                BlockPos imm = neighbour.immutable();
+                visited.add(imm);
+                queue.add(imm);
+            }
+        }
+    }
+
+    private static void fadeVerticalColumn(ServerWorld world, BlockPos centre, Block centreBlock,
+                                           int fadeDurationTicks, BiPredicate<Block, Block> compatible) {
+        BlockPos cursor = centre.above();
+        while (cursor.getY() < world.getMaxBuildHeight()
+                && world.hasChunk(cursor.getX() >> 4, cursor.getZ() >> 4)
+                && compatible.test(world.getBlockState(cursor).getBlock(), centreBlock)) {
+            startFadeSingle(world, cursor.immutable(), fadeDurationTicks);
+            cursor = cursor.above();
+        }
+        cursor = centre.below();
+        while (cursor.getY() >= 0
+                && world.hasChunk(cursor.getX() >> 4, cursor.getZ() >> 4)
+                && compatible.test(world.getBlockState(cursor).getBlock(), centreBlock)) {
+            startFadeSingle(world, cursor.immutable(), fadeDurationTicks);
+            cursor = cursor.below();
+        }
+    }
+
+    private static void fadeConnected(ServerWorld world, BlockPos centre, int fadeDurationTicks,
+                                      Predicate<BlockPos> compatible, int limit) {
+        Set<BlockPos> visited = new HashSet<>();
+        Deque<BlockPos> queue = new ArrayDeque<>();
+        queue.add(centre.immutable());
+        visited.add(centre.immutable());
+        while (!queue.isEmpty() && visited.size() <= limit) {
+            BlockPos pos = queue.poll();
+            if (!pos.equals(centre)) {
+                startFadeSingle(world, pos, fadeDurationTicks);
+            }
+            for (Direction dir : Direction.values()) {
+                BlockPos neighbour = pos.relative(dir);
+                if (visited.contains(neighbour) || !world.hasChunk(neighbour.getX() >> 4, neighbour.getZ() >> 4)) {
+                    continue;
+                }
+                if (compatible.test(neighbour)) {
+                    BlockPos imm = neighbour.immutable();
+                    visited.add(imm);
+                    queue.add(imm);
+                }
+            }
+        }
+    }
+
+    private static void fadePlantRadius(ServerWorld world, BlockPos centre, int fadeDurationTicks) {
+        double rSq = (double) PLANT_SPREAD_RADIUS * PLANT_SPREAD_RADIUS;
+        for (int dx = -PLANT_SPREAD_RADIUS; dx <= PLANT_SPREAD_RADIUS; dx++) {
+            for (int dy = -PLANT_SPREAD_RADIUS; dy <= PLANT_SPREAD_RADIUS; dy++) {
+                for (int dz = -PLANT_SPREAD_RADIUS; dz <= PLANT_SPREAD_RADIUS; dz++) {
+                    if (dx == 0 && dy == 0 && dz == 0) {
+                        continue;
+                    }
+                    if (dx * dx + dy * dy + dz * dz >= rSq) {
+                        continue;
+                    }
+                    startFadeSingle(world, centre.offset(dx, dy, dz).immutable(), fadeDurationTicks);
+                }
+            }
+        }
+    }
+
+    private static boolean startFadeSingle(ServerWorld world, BlockPos pos, int fadeDurationTicks) {
+        Map<BlockPos, Entry> worldMap = WORLDS.get(world.dimension());
+        if (worldMap == null) {
+            return false;
+        }
+        Entry entry = worldMap.get(pos);
+        if (entry == null || entry.progress <= 0F) {
+            return false;
+        }
+        if (!entry.fading) {
+            entry.fading = true;
+            entry.fadePerTick = Math.max(0.0001F, entry.progress / Math.max(1, fadeDurationTicks));
+        }
+        return true;
     }
 
     public static void tickFading(ServerWorld world) {

@@ -36,12 +36,16 @@ public abstract class LivingEntityAgingMixin implements AgedLivingEntityAccess {
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
     private void rotpNextAlbum$saveAgingData(CompoundNBT nbt, CallbackInfo ci) {
         float progress = rotpNextAlbum$getAgingProgress();
-        if (progress > 0F) {
+        if (progress > 0F && ((LivingEntity) (Object) this).isAlive()) {
             nbt.putFloat(AgingEntityUtil.NBT_AGING_PROGRESS, progress);
             UUID owner = rotpNextAlbum$getAgingOwner();
             if (owner != null) {
                 nbt.putUUID(AgingEntityUtil.NBT_AGING_OWNER, owner);
             }
+        }
+        else {
+            nbt.remove(AgingEntityUtil.NBT_AGING_PROGRESS);
+            nbt.remove(AgingEntityUtil.NBT_AGING_OWNER);
         }
     }
 

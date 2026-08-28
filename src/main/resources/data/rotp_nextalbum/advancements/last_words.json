@@ -1,0 +1,23 @@
+{
+  "parent": "jojo:jojo/summon_stand",
+  "display": {
+    "icon": {
+      "item": "minecraft:emerald"
+    },
+    "title": {
+      "translate": "advancements.rotp_nextalbum.last_words.title"
+    },
+    "description": {
+      "translate": "advancements.rotp_nextalbum.last_words.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "last_words": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -1,17 +1,28 @@
 package com.nextalubm.rotp_nextalbum.util;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import com.github.standobyte.jojo.entity.stand.StandEntity;
+import com.github.standobyte.jojo.power.impl.stand.IStandPower;
 import com.nextalubm.rotp_nextalbum.NextAlbumConfig;
 import com.nextalubm.rotp_nextalbum.entity.SexPistolsEntity;
+import com.nextalubm.rotp_nextalbum.stand.SexPistolsEntities;
+import com.nextalubm.rotp_nextalbum.stand.SexPistolsStandType;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.util.Direction;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockRayTraceResult;
 import net.minecraft.util.math.EntityRayTraceResult;
 import net.minecraft.util.math.RayTraceContext;
 import net.minecraft.util.math.RayTraceResult;
@@ -22,6 +33,14 @@ public final class SexPistolsBulletRedirectUtil {
 
     public static final double TARGET_SEARCH_RANGE =  NextAlbumConfig.getCommonConfigInstance(false).sexPistolsTargetSearchRange.get().floatValue();
     public static final double ASSIST_SEARCH_RANGE =  NextAlbumConfig.getCommonConfigInstance(false).sexPistolsTransferAssistRange.get().floatValue();
+
+    public static double getTargetSearchRange() {
+        try {
+            return NextAlbumConfig.getCommonConfigInstance(false).sexPistolsTargetSearchRange.get().floatValue();
+        } catch (Throwable t) {
+            return TARGET_SEARCH_RANGE;
+        }
+    }
 
     public static final double STAND_HIT_RADIUS = 0.75D;
     public static final double EXIT_OFFSET = 0.35D;
@@ -56,12 +75,34 @@ public final class SexPistolsBulletRedirectUtil {
     }
 
     public static RedirectResult getRedirect(World world, LivingEntity owner, SexPistolsEntity sourceStand, Vector3d hitPos, Vector3d incomingMotion, SexPistolsTargetMode targetMode, Entity lockedTarget, SexPistolsTransferOrder transferOrder, UUID lastTransferStandId) {
+        return getRedirect(world, owner, sourceStand, hitPos, incomingMotion, targetMode, lockedTarget, transferOrder, lastTransferStandId, 1);
+    }
+
+    public static RedirectResult getRedirect(World world, LivingEntity owner, SexPistolsEntity sourceStand, Vector3d hitPos, Vector3d incomingMotion, SexPistolsTargetMode targetMode, Entity lockedTarget, SexPistolsTransferOrder transferOrder, UUID lastTransferStandId, int remainingRedirects) {
         double speed = Math.max(MIN_SPEED, incomingMotion.length() * SPEED_SCALE);
+        int hops = Math.max(1, remainingRedirects);
         RedirectResult numberTransfer = findPriorityNumberTransferRedirect(world, owner, sourceStand, hitPos, speed, transferOrder, lastTransferStandId);
         if (numberTransfer != null) {
             return numberTransfer;
         }
-        RedirectResult best = findBestAttackPath(world, owner, sourceStand, hitPos, incomingMotion, targetMode, speed, lockedTarget);
+        RedirectResult forced = findForcedAttackPath(world, owner, sourceStand, hitPos, incomingMotion, speed, hops);
+        if (forced != null) {
+            RedirectResult transfer = findTransferRedirect(world, owner, sourceStand, hitPos, incomingMotion, speed, forced, transferOrder, lastTransferStandId);
+            return transfer != null ? transfer : forced;
+        }
+        if (targetMode == SexPistolsTargetMode.AIM && lockedTarget != null) {
+            RedirectResult aim = findGuidedAttackPath(world, owner, sourceStand, hitPos, incomingMotion, speed, hops, guidedFromLocked(lockedTarget), 0.0D);
+            if (aim != null) {
+                RedirectResult transfer = findTransferRedirect(world, owner, sourceStand, hitPos, incomingMotion, speed, aim, transferOrder, lastTransferStandId);
+                return transfer != null ? transfer : aim;
+            }
+        }
+        SexPistolsTargetMode searchMode = targetMode == SexPistolsTargetMode.AIM && lockedTarget == null
+                ? SexPistolsTargetMode.ALL : targetMode;
+        RedirectResult best = findBestAttackPath(world, owner, sourceStand, hitPos, incomingMotion, searchMode, speed, lockedTarget);
+        if (best == null) {
+            best = findBestEffortAttack(world, owner, sourceStand, hitPos, incomingMotion, searchMode, speed, lockedTarget);
+        }
         if (best != null) {
             RedirectResult transfer = findTransferRedirect(world, owner, sourceStand, hitPos, incomingMotion, speed, best, transferOrder, lastTransferStandId);
             return transfer != null ? transfer : best;
@@ -82,6 +123,262 @@ public final class SexPistolsBulletRedirectUtil {
         return result(hitPos, direction, speed, null, null, true);
     }
 
+    private static RedirectResult findForcedAttackPath(World world, LivingEntity owner, SexPistolsEntity sourceStand, Vector3d origin, Vector3d incomingMotion, double speed, int remainingRedirects) {
+        SexPistolsEntities sexPistols = IStandPower.getStandPowerOptional(owner).resolve().flatMap(SexPistolsStandType::getSexPistolsEntities).orElse(null);
+        if (sexPistols == null) {
+            return null;
+        }
+        List<GuidedAim> aims = new ArrayList<>();
+        Vector3d incomingDir = incomingMotion.lengthSqr() > 1.0E-6D ? incomingMotion.normalize() : owner.getLookAngle();
+        for (LivingEntity target : sexPistols.getValidForcedEntities()) {
+            aims.add(new GuidedAim(target, getTargetAimPoints(origin, incomingDir, target), null));
+        }
+        for (BlockPos pos : sexPistols.getValidForcedBlocks()) {
+            Vector3d center = Vector3d.atCenterOf(pos);
+            aims.add(new GuidedAim(null, getBlockAimPoints(origin, center), pos));
+        }
+        return findGuidedAttackPath(world, owner, sourceStand, origin, incomingMotion, speed, remainingRedirects, aims, -10000.0D);
+    }
+
+    private static List<GuidedAim> guidedFromLocked(Entity lockedTarget) {
+        List<GuidedAim> aims = new ArrayList<>();
+        if (lockedTarget instanceof LivingEntity && lockedTarget.isAlive()) {
+            LivingEntity living = (LivingEntity) lockedTarget;
+            aims.add(new GuidedAim(living, java.util.Collections.singletonList(living.getBoundingBox().getCenter()), null));
+        }
+        return aims;
+    }
+
+    private static RedirectResult findGuidedAttackPath(World world, LivingEntity owner, SexPistolsEntity sourceStand, Vector3d origin, Vector3d incomingMotion, double speed, int remainingRedirects, List<GuidedAim> aims, double scoreOffset) {
+        if (aims == null || aims.isEmpty()) {
+            return null;
+        }
+        List<PathCandidate> candidates = new ArrayList<>();
+        Entity ignored = sourceStand != null ? sourceStand : owner;
+        Vector3d incomingDir = incomingMotion.lengthSqr() > 1.0E-6D ? incomingMotion.normalize() : owner.getLookAngle();
+        List<SexPistolsEntity> relays = findGuidedRelays(world, owner, sourceStand, origin);
+        int maxHops = Math.max(1, remainingRedirects);
+        for (GuidedAim aim : aims) {
+            for (Vector3d aimPoint : aim.aimPoints) {
+                boolean direct = hasLineOfSight(world, ignored, origin, aimPoint, aim.allowBlock);
+                addAttackCandidate(world, owner, sourceStand, ignored, origin, incomingDir, speed, aim.target, aimPoint, candidates, scoreOffset, aim.allowBlock);
+                if (!direct) {
+                    addGuidedMultiHopCandidates(world, owner, sourceStand, ignored, origin, incomingDir, speed, aim.target, aimPoint, aim.allowBlock, relays, maxHops, candidates, scoreOffset);
+                    addGuidedDetourCandidates(world, owner, sourceStand, ignored, origin, incomingDir, speed, aim.target, aimPoint, aim.allowBlock, maxHops, candidates, scoreOffset);
+                    addNaturalRicochetCandidate(world, owner, sourceStand, ignored, origin, incomingDir, speed, aim.target, aimPoint, aim.allowBlock, candidates, scoreOffset);
+                }
+            }
+            addGuidedBestEffort(world, owner, sourceStand, ignored, origin, incomingDir, speed, aim, candidates, scoreOffset);
+        }
+        return candidates.stream().min(Comparator.comparingDouble(candidate -> candidate.score)).map(candidate -> candidate.result).orElse(null);
+    }
+
+    private static List<SexPistolsEntity> findGuidedRelays(World world, LivingEntity owner, SexPistolsEntity sourceStand, Vector3d origin) {
+        AxisAlignedBB box = new AxisAlignedBB(origin, origin).inflate(SexPistolsAimUtil.AIM_MAX_DISTANCE);
+        return world.getEntitiesOfClass(SexPistolsEntity.class, box,
+                stand -> stand.isAlive() && stand != sourceStand && stand.getUser() == owner && SexPistolsStandUtil.isSexPistolsRemoteControlState(stand));
+    }
+
+    private static void addGuidedMultiHopCandidates(World world, LivingEntity owner, SexPistolsEntity sourceStand, Entity ignored,
+            Vector3d origin, Vector3d incomingDir, double speed, LivingEntity target, Vector3d aimPoint, @Nullable BlockPos allowBlock,
+            List<SexPistolsEntity> relays, int maxHops, List<PathCandidate> candidates, double scoreOffset) {
+        if (relays.isEmpty() || maxHops < 1) {
+            return;
+        }
+        for (SexPistolsEntity first : relays) {
+            Vector3d firstPos = first.getBoundingBox().getCenter();
+            Vector3d toFirst = firstPos.subtract(origin);
+            if (toFirst.lengthSqr() <= 1.0E-6D || !hasLineOfSight(world, ignored, origin, firstPos)) {
+                continue;
+            }
+            int remaining = maxHops - 1;
+            if (!canReachAim(world, owner, first, firstPos, aimPoint, allowBlock, target, relays, remaining)) {
+                continue;
+            }
+            int obstructions = countPathObstructions(world, owner, sourceStand, origin, firstPos, first);
+            double defenseRisk = standDefenseRisk(world, owner, sourceStand, origin, firstPos, target);
+            candidates.add(new PathCandidate(result(origin, toFirst, speed, target, first, false),
+                    scorePath(origin, firstPos, incomingDir, 1, obstructions, defenseRisk) + firstPos.distanceTo(aimPoint) + scoreOffset));
+        }
+    }
+
+    private static boolean canReachAim(World world, LivingEntity owner, SexPistolsEntity fromStand, Vector3d from, Vector3d aimPoint,
+            @Nullable BlockPos allowBlock, LivingEntity target, List<SexPistolsEntity> relays, int remainingHops) {
+        if (hasLineOfSight(world, fromStand != null ? fromStand : owner, from, aimPoint, allowBlock)) {
+            return true;
+        }
+        if (remainingHops <= 0) {
+            return false;
+        }
+        ArrayDeque<RelayHop> queue = new ArrayDeque<>();
+        Set<UUID> visited = new HashSet<>();
+        if (fromStand != null) {
+            visited.add(fromStand.getUUID());
+        }
+        queue.add(new RelayHop(fromStand, from, remainingHops));
+        while (!queue.isEmpty()) {
+            RelayHop hop = queue.poll();
+            if (hasLineOfSight(world, hop.stand != null ? hop.stand : owner, hop.pos, aimPoint, allowBlock)) {
+                return true;
+            }
+            if (hop.remaining <= 0) {
+                continue;
+            }
+            for (SexPistolsEntity next : relays) {
+                if (visited.contains(next.getUUID())) {
+                    continue;
+                }
+                Vector3d nextPos = next.getBoundingBox().getCenter();
+                if (!hasLineOfSight(world, hop.stand != null ? hop.stand : owner, hop.pos, nextPos)) {
+                    continue;
+                }
+                visited.add(next.getUUID());
+                queue.add(new RelayHop(next, nextPos, hop.remaining - 1));
+            }
+        }
+        return false;
+    }
+
+    private static void addGuidedDetourCandidates(World world, LivingEntity owner, SexPistolsEntity sourceStand, Entity ignored,
+            Vector3d origin, Vector3d incomingDir, double speed, LivingEntity target, Vector3d aimPoint, @Nullable BlockPos allowBlock,
+            int maxHops, List<PathCandidate> candidates, double scoreOffset) {
+        if (maxHops < 2 || hasLineOfSight(world, ignored, origin, aimPoint, allowBlock)) {
+            return;
+        }
+        for (Vector3d detour : sampleDetours(world, ignored, origin, aimPoint, allowBlock)) {
+            Vector3d toDetour = detour.subtract(origin);
+            if (toDetour.lengthSqr() <= 1.0E-6D || !hasLineOfSight(world, ignored, origin, detour)) {
+                continue;
+            }
+            boolean reaches = hasLineOfSight(world, ignored, detour, aimPoint, allowBlock);
+            int obstructions = countPathObstructions(world, owner, sourceStand, origin, detour, target)
+                    + (reaches ? countPathObstructions(world, owner, sourceStand, detour, aimPoint, target) : 2);
+            double defenseRisk = standDefenseRisk(world, owner, sourceStand, origin, detour, target);
+            double score = scorePath(origin, detour, incomingDir, 1, obstructions, defenseRisk)
+                    + detour.distanceTo(aimPoint)
+                    + (reaches ? 0.0D : 80.0D)
+                    + scoreOffset;
+            candidates.add(new PathCandidate(result(origin, toDetour, speed, target, null, false), score));
+        }
+    }
+
+    private static void addGuidedBestEffort(World world, LivingEntity owner, SexPistolsEntity sourceStand, Entity ignored,
+            Vector3d origin, Vector3d incomingDir, double speed, GuidedAim aim, List<PathCandidate> candidates, double scoreOffset) {
+        Vector3d aimPoint = aim.aimPoints.isEmpty() ? origin.add(incomingDir) : aim.aimPoints.get(0);
+        Vector3d direct = aimPoint.subtract(origin);
+        if (direct.lengthSqr() <= 1.0E-6D) {
+            return;
+        }
+        Vector3d direction = pickClearDirectionToward(world, ignored, origin, direct.normalize(), aim.allowBlock);
+        int obstructions = countPathObstructions(world, owner, sourceStand, origin, origin.add(direction.scale(8.0D)), aim.target);
+        double defenseRisk = standDefenseRisk(world, owner, sourceStand, origin, origin.add(direction.scale(8.0D)), aim.target);
+        RedirectResult result = aim.target != null
+                ? attackResult(origin, direction, speed, aim.target)
+                : result(origin, direction, speed, null, null, false);
+        candidates.add(new PathCandidate(result, 2500.0D + scorePath(origin, origin.add(direction), incomingDir, 0, obstructions, defenseRisk) + scoreOffset));
+    }
+
+    private static List<Vector3d> sampleDetours(World world, Entity ignored, Vector3d origin, Vector3d aimPoint, @Nullable BlockPos allowBlock) {
+        List<Vector3d> points = new ArrayList<>();
+        RayTraceResult hit = clipPath(world, ignored, origin, aimPoint);
+        if (!(hit instanceof BlockRayTraceResult) || hit.getType() != RayTraceResult.Type.BLOCK) {
+            return points;
+        }
+        BlockRayTraceResult blockHit = (BlockRayTraceResult) hit;
+        if (allowBlock != null && allowBlock.equals(blockHit.getBlockPos())) {
+            return points;
+        }
+        Vector3d hitLoc = blockHit.getLocation();
+        Vector3d forward = aimPoint.subtract(origin);
+        if (forward.lengthSqr() <= 1.0E-6D) {
+            return points;
+        }
+        forward = forward.normalize();
+        Vector3d right = new Vector3d(-forward.z, 0.0D, forward.x);
+        if (right.lengthSqr() <= 1.0E-6D) {
+            right = new Vector3d(1.0D, 0.0D, 0.0D);
+        }
+        right = right.normalize();
+        double[] offsets = {1.6D, 3.2D, 5.0D};
+        for (double offset : offsets) {
+            addOpenDetour(world, points, hitLoc.add(right.scale(offset)).add(0.0D, 0.4D, 0.0D));
+            addOpenDetour(world, points, hitLoc.subtract(right.scale(offset)).add(0.0D, 0.4D, 0.0D));
+            addOpenDetour(world, points, hitLoc.add(0.0D, offset, 0.0D));
+            addOpenDetour(world, points, hitLoc.add(right.scale(offset * 0.7D)).add(0.0D, offset * 0.55D, 0.0D));
+            addOpenDetour(world, points, hitLoc.subtract(right.scale(offset * 0.7D)).add(0.0D, offset * 0.55D, 0.0D));
+        }
+        BlockPos blocked = blockHit.getBlockPos();
+        for (Direction direction : Direction.values()) {
+            addOpenDetour(world, points, Vector3d.atCenterOf(blocked.relative(direction, 2)));
+        }
+        return points;
+    }
+
+    private static void addOpenDetour(World world, List<Vector3d> points, Vector3d point) {
+        BlockPos pos = new BlockPos(point);
+        if (!world.getBlockState(pos).getCollisionShape(world, pos).isEmpty()) {
+            return;
+        }
+        points.add(point);
+    }
+
+    private static Vector3d pickClearDirectionToward(World world, Entity ignored, Vector3d origin, Vector3d desired, @Nullable BlockPos allowBlock) {
+        double best = clearDistance(world, ignored, origin, desired, SCOUT_RANGE);
+        Vector3d bestDir = desired;
+        Vector3d right = new Vector3d(-desired.z, 0.0D, desired.x);
+        if (right.lengthSqr() > 1.0E-6D) {
+            right = right.normalize();
+            double[] yaws = {0.35D, -0.35D, 0.7D, -0.7D};
+            for (double yaw : yaws) {
+                Vector3d dir = desired.add(right.scale(yaw)).add(0.0D, 0.15D, 0.0D);
+                if (dir.lengthSqr() <= 1.0E-6D) {
+                    continue;
+                }
+                dir = dir.normalize();
+                double clear = clearDistance(world, ignored, origin, dir, SCOUT_RANGE);
+                if (clear > best + 0.35D) {
+                    best = clear;
+                    bestDir = dir;
+                }
+            }
+        }
+        Vector3d up = desired.add(0.0D, 0.45D, 0.0D).normalize();
+        if (clearDistance(world, ignored, origin, up, SCOUT_RANGE) > best + 0.35D) {
+            bestDir = up;
+        }
+        return bestDir;
+    }
+
+    private static void addAttackCandidate(World world, LivingEntity owner, SexPistolsEntity sourceStand, Entity ignored,
+            Vector3d origin, Vector3d incomingDir, double speed, LivingEntity target, Vector3d aimPoint,
+            List<PathCandidate> candidates, double scoreOffset) {
+        addAttackCandidate(world, owner, sourceStand, ignored, origin, incomingDir, speed, target, aimPoint, candidates, scoreOffset, null);
+    }
+
+    private static void addAttackCandidate(World world, LivingEntity owner, SexPistolsEntity sourceStand, Entity ignored,
+            Vector3d origin, Vector3d incomingDir, double speed, LivingEntity target, Vector3d aimPoint,
+            List<PathCandidate> candidates, double scoreOffset, @Nullable BlockPos allowBlock) {
+        Vector3d direct = aimPoint.subtract(origin);
+        if (direct.lengthSqr() > 1.0E-6D && hasLineOfSight(world, ignored, origin, aimPoint, allowBlock)) {
+            int obstructions = countPathObstructions(world, owner, sourceStand, origin, aimPoint, target);
+            double defenseRisk = standDefenseRisk(world, owner, sourceStand, origin, aimPoint, target);
+            RedirectResult result = target != null
+                    ? attackResult(origin, direct, speed, target)
+                    : result(origin, direct, speed, null, null, false);
+            candidates.add(new PathCandidate(result, scorePath(origin, aimPoint, incomingDir, 0, obstructions, defenseRisk) + scoreOffset));
+        }
+    }
+
+    private static List<Vector3d> getBlockAimPoints(Vector3d origin, Vector3d blockCenter) {
+        List<Vector3d> points = new ArrayList<>();
+        points.add(blockCenter);
+        Vector3d toOrigin = origin.subtract(blockCenter);
+        if (toOrigin.lengthSqr() > 1.0E-6D) {
+            points.add(blockCenter.add(toOrigin.normalize().scale(0.49D)));
+        }
+        return points;
+    }
+
     private static RedirectResult findBestAttackPath(World world, LivingEntity owner, SexPistolsEntity sourceStand, Vector3d origin, Vector3d incomingMotion, SexPistolsTargetMode targetMode, double speed, Entity lockedTarget) {
         List<LivingEntity> targets = getCandidateTargets(world, owner, origin, targetMode, lockedTarget);
         if (targets.isEmpty()) {
@@ -93,24 +390,45 @@ public final class SexPistolsBulletRedirectUtil {
         for (LivingEntity target : targets) {
             for (Vector3d aimPoint : getTargetAimPoints(origin, incomingDir, target)) {
                 Vector3d direct = aimPoint.subtract(origin);
-                if (direct.lengthSqr() > 1.0E-6D && hasLineOfSight(world, ignored, origin, aimPoint)) {
+                boolean hasDirect = direct.lengthSqr() > 1.0E-6D && hasLineOfSight(world, ignored, origin, aimPoint);
+                if (hasDirect) {
                     int obstructions = countPathObstructions(world, owner, sourceStand, origin, aimPoint, target);
                     double defenseRisk = standDefenseRisk(world, owner, sourceStand, origin, aimPoint, target);
                     candidates.add(new PathCandidate(attackResult(origin, direct, speed, target), scorePath(origin, aimPoint, incomingDir, 0, obstructions, defenseRisk)));
                 }
-                SexPistolsEntity relay = findBestRelay(world, owner, sourceStand, origin, target, aimPoint);
-                if (relay != null) {
-                    Vector3d relayCenter = relay.getBoundingBox().getCenter();
-                    Vector3d toRelay = relayCenter.subtract(origin);
-                    if (toRelay.lengthSqr() > 1.0E-6D && hasLineOfSight(world, ignored, origin, relayCenter) && hasLineOfSight(world, relay, relayCenter, aimPoint)) {
-                        int obstructions = countPathObstructions(world, owner, sourceStand, origin, relayCenter, relay) + countPathObstructions(world, owner, relay, relayCenter, aimPoint, target);
-                        double defenseRisk = standDefenseRisk(world, owner, sourceStand, origin, relayCenter, target) + standDefenseRisk(world, owner, relay, relayCenter, aimPoint, target);
-                        candidates.add(new PathCandidate(result(origin, toRelay, speed, target, relay, false), scorePath(origin, relayCenter, incomingDir, 1, obstructions, defenseRisk) + relayCenter.distanceTo(aimPoint)));
+                else {
+                    addNaturalRicochetCandidate(world, owner, sourceStand, ignored, origin, incomingDir, speed, target, aimPoint, null, candidates, 0.0D);
+                }
+                if (!hasDirect) {
+                    SexPistolsEntity relay = findBestRelay(world, owner, sourceStand, origin, target, aimPoint);
+                    if (relay != null) {
+                        Vector3d relayCenter = relay.getBoundingBox().getCenter();
+                        Vector3d toRelay = relayCenter.subtract(origin);
+                        if (toRelay.lengthSqr() > 1.0E-6D && hasLineOfSight(world, ignored, origin, relayCenter) && hasLineOfSight(world, relay, relayCenter, aimPoint)) {
+                            int obstructions = countPathObstructions(world, owner, sourceStand, origin, relayCenter, relay) + countPathObstructions(world, owner, relay, relayCenter, aimPoint, target);
+                            double defenseRisk = standDefenseRisk(world, owner, sourceStand, origin, relayCenter, target) + standDefenseRisk(world, owner, relay, relayCenter, aimPoint, target);
+                            candidates.add(new PathCandidate(result(origin, toRelay, speed, target, relay, false), scorePath(origin, relayCenter, incomingDir, 1, obstructions, defenseRisk) + relayCenter.distanceTo(aimPoint)));
+                        }
                     }
                 }
             }
         }
         return candidates.stream().min(Comparator.comparingDouble(candidate -> candidate.score)).map(candidate -> candidate.result).orElse(null);
+    }
+
+    private static RedirectResult findBestEffortAttack(World world, LivingEntity owner, SexPistolsEntity sourceStand,
+            Vector3d origin, Vector3d incomingMotion, SexPistolsTargetMode targetMode, double speed, Entity lockedTarget) {
+        List<LivingEntity> targets = getCandidateTargets(world, owner, origin, targetMode, lockedTarget);
+        if (targets.isEmpty()) {
+            return null;
+        }
+        LivingEntity nearest = targets.get(0);
+        Vector3d aimPoint = nearest.getBoundingBox().getCenter();
+        Vector3d direct = aimPoint.subtract(origin);
+        if (direct.lengthSqr() <= 1.0E-6D) {
+            return null;
+        }
+        return attackResult(origin, direct, speed, nearest);
     }
 
     public static boolean hasVisibleTransferRelay(World world, LivingEntity owner, int sourcePistolIndex, Vector3d origin, SexPistolsTargetMode targetMode, Entity lockedTarget, SexPistolsTransferOrder transferOrder, UUID lastTransferStandId) {
@@ -237,11 +555,17 @@ public final class SexPistolsBulletRedirectUtil {
         List<LivingEntity> targets = new ArrayList<>();
         if (lockedTarget instanceof LivingEntity && lockedTarget.isAlive()) {
             LivingEntity lockedLiving = (LivingEntity) lockedTarget;
-            if (lockedLiving.distanceToSqr(origin.x, origin.y, origin.z) <= TARGET_SEARCH_RANGE * TARGET_SEARCH_RANGE && isValidTarget(owner, lockedLiving, targetMode)) {
+            double lockRange = targetMode == SexPistolsTargetMode.AIM ? SexPistolsAimUtil.AIM_MAX_DISTANCE : getTargetSearchRange();
+            SexPistolsTargetMode lockMode = targetMode == SexPistolsTargetMode.AIM ? SexPistolsTargetMode.ALL : targetMode;
+            if (lockedLiving.distanceToSqr(origin.x, origin.y, origin.z) <= lockRange * lockRange && isValidTarget(owner, lockedLiving, lockMode)) {
                 targets.add(lockedLiving);
             }
         }
-        for (LivingEntity target : findTargets(world, owner, origin, TARGET_SEARCH_RANGE, targetMode)) {
+        if (targetMode == SexPistolsTargetMode.AIM && !targets.isEmpty()) {
+            return targets;
+        }
+        SexPistolsTargetMode searchMode = targetMode == SexPistolsTargetMode.AIM ? SexPistolsTargetMode.ALL : targetMode;
+        for (LivingEntity target : findTargets(world, owner, origin, getTargetSearchRange(), searchMode)) {
             if (!targets.contains(target)) {
                 targets.add(target);
             }
@@ -330,23 +654,33 @@ public final class SexPistolsBulletRedirectUtil {
     }
 
     public static boolean isValidTarget(LivingEntity owner, LivingEntity entity, SexPistolsTargetMode targetMode) {
+        if (owner == null || entity == null || !entity.isAlive() || entity == owner) {
+            return false;
+        }
         if (entity instanceof StandEntity) {
             return false;
         }
         if (!targetMode.matches(owner, entity)) {
             return false;
         }
-        if (entity instanceof SexPistolsEntity && ((SexPistolsEntity) entity).getUser() == owner) {
-            return false;
+        if (entity instanceof SexPistolsEntity) {
+            LivingEntity pistolUser = ((SexPistolsEntity) entity).getUser();
+            if (pistolUser != null && (pistolUser == owner || pistolUser.getUUID().equals(owner.getUUID()))) {
+                return false;
+            }
         }
         return true;
     }
 
     private static SexPistolsEntity findBestRelay(World world, LivingEntity owner, SexPistolsEntity sourceStand, Vector3d origin, Entity target, Vector3d aimPoint) {
+        return findBestRelay(world, owner, sourceStand, origin, target, aimPoint, null);
+    }
+
+    private static SexPistolsEntity findBestRelay(World world, LivingEntity owner, SexPistolsEntity sourceStand, Vector3d origin, Entity target, Vector3d aimPoint, @Nullable BlockPos allowBlock) {
         AxisAlignedBB box = new AxisAlignedBB(origin, origin).inflate(ASSIST_SEARCH_RANGE);
         return world.getEntitiesOfClass(SexPistolsEntity.class, box,
                 stand -> stand.isAlive() && stand != sourceStand && stand.getUser() == owner && SexPistolsStandUtil.isSexPistolsRemoteControlState(stand)).stream()
-                .filter(stand -> hasLineOfSight(world, stand, stand.getBoundingBox().getCenter(), aimPoint))
+                .filter(stand -> hasLineOfSight(world, stand, stand.getBoundingBox().getCenter(), aimPoint, allowBlock))
                 .min(Comparator.comparingDouble(stand -> stand.distanceToSqr(origin.x, origin.y, origin.z) + standDefenseRisk(world, owner, stand, stand.getBoundingBox().getCenter(), aimPoint, target)))
                 .orElse(null);
     }
@@ -421,6 +755,10 @@ public final class SexPistolsBulletRedirectUtil {
         AxisAlignedBB box = new AxisAlignedBB(start, end).inflate(0.45D);
         List<Entity> entities = world.getEntitiesOfClass(Entity.class, box, entity -> entity.isAlive() && entity != owner && entity != ignored && entity != target && !(entity instanceof SexPistolsEntity && ((SexPistolsEntity) entity).getUser() == owner) && !(entity instanceof StandEntity));
         int count = 0;
+        RayTraceResult clip = clipPath(world, ignored, start, end);
+        if (clip.getType() == RayTraceResult.Type.BLOCK) {
+            count++;
+        }
         for (Entity entity : entities) {
             if (segmentIntersectsEntity(start, end, entity, 0.25D)) {
                 count++;
@@ -464,12 +802,91 @@ public final class SexPistolsBulletRedirectUtil {
         return new Vector3d(0.0D, 0.0D, 1.0D);
     }
 
+    private static RayTraceResult clipPath(World world, Entity ignored, Vector3d start, Vector3d end) {
+        return world.clip(new RayTraceContext(start, end,
+                RayTraceContext.BlockMode.COLLIDER,
+                RayTraceContext.FluidMode.NONE,
+                ignored));
+    }
+
+    private static void addNaturalRicochetCandidate(World world, LivingEntity owner, SexPistolsEntity sourceStand, Entity ignored,
+            Vector3d origin, Vector3d incomingDir, double speed, LivingEntity target, Vector3d aimPoint, @Nullable BlockPos allowBlock,
+            List<PathCandidate> candidates, double scoreOffset) {
+        RayTraceResult hit = clipPath(world, ignored, origin, aimPoint);
+        if (!(hit instanceof BlockRayTraceResult) || hit.getType() != RayTraceResult.Type.BLOCK) {
+            return;
+        }
+        BlockRayTraceResult blockHit = (BlockRayTraceResult) hit;
+        if (allowBlock != null && allowBlock.equals(blockHit.getBlockPos())) {
+            return;
+        }
+        Vector3d bouncePos = blockHit.getLocation().add(Vector3d.atLowerCornerOf(blockHit.getDirection().getNormal()).scale(0.06D));
+        Vector3d toWall = bouncePos.subtract(origin);
+        if (toWall.lengthSqr() <= 1.0E-6D) {
+            return;
+        }
+        Vector3d toWallDir = toWall.normalize();
+        if (incomingDir.lengthSqr() > 1.0E-6D && toWallDir.dot(incomingDir) < 0.12D) {
+            return;
+        }
+        Vector3d reflected = reflectDirection(incomingDir.lengthSqr() > 1.0E-6D ? incomingDir : toWallDir, blockHit.getDirection());
+        Vector3d afterBounce = bouncePos.add(reflected.scale(Math.max(2.0D, bouncePos.distanceTo(aimPoint))));
+        if (!hasLineOfSight(world, ignored, bouncePos, aimPoint, allowBlock)
+                && clipPath(world, ignored, bouncePos, afterBounce).getType() == RayTraceResult.Type.BLOCK) {
+            return;
+        }
+        int obstructions = countPathObstructions(world, owner, sourceStand, origin, bouncePos, target);
+        double defenseRisk = standDefenseRisk(world, owner, sourceStand, origin, bouncePos, target);
+        double naturalBonus = hasLineOfSight(world, ignored, bouncePos, aimPoint, allowBlock) ? -6.0D : 4.0D;
+        candidates.add(new PathCandidate(result(origin, toWall, speed, target, null, false),
+                scorePath(origin, bouncePos, incomingDir, 1, obstructions, defenseRisk) + bouncePos.distanceTo(aimPoint) * 0.55D + naturalBonus + scoreOffset));
+    }
+
+    private static Vector3d reflectDirection(Vector3d incoming, Direction face) {
+        Vector3d normal = Vector3d.atLowerCornerOf(face.getNormal()).normalize();
+        Vector3d dir = incoming.lengthSqr() > 1.0E-6D ? incoming.normalize() : normal.reverse();
+        return dir.subtract(normal.scale(2.0D * dir.dot(normal))).normalize();
+    }
+
     private static boolean hasLineOfSight(World world, Entity ignored, Vector3d start, Vector3d end) {
+        return hasLineOfSight(world, ignored, start, end, null);
+    }
+
+    private static boolean hasLineOfSight(World world, Entity ignored, Vector3d start, Vector3d end, @Nullable BlockPos allowBlock) {
         RayTraceResult result = world.clip(new RayTraceContext(start, end,
                 RayTraceContext.BlockMode.COLLIDER,
                 RayTraceContext.FluidMode.NONE,
                 ignored));
-        return result.getType() == RayTraceResult.Type.MISS;
+        if (result.getType() == RayTraceResult.Type.MISS) {
+            return true;
+        }
+        return allowBlock != null
+                && result.getType() == RayTraceResult.Type.BLOCK
+                && allowBlock.equals(((BlockRayTraceResult) result).getBlockPos());
+    }
+
+    private static final class GuidedAim {
+        private final LivingEntity target;
+        private final List<Vector3d> aimPoints;
+        private final BlockPos allowBlock;
+
+        private GuidedAim(LivingEntity target, List<Vector3d> aimPoints, BlockPos allowBlock) {
+            this.target = target;
+            this.aimPoints = aimPoints;
+            this.allowBlock = allowBlock;
+        }
+    }
+
+    private static final class RelayHop {
+        private final SexPistolsEntity stand;
+        private final Vector3d pos;
+        private final int remaining;
+
+        private RelayHop(SexPistolsEntity stand, Vector3d pos, int remaining) {
+            this.stand = stand;
+            this.pos = pos;
+            this.remaining = remaining;
+        }
     }
 
     private static class PathCandidate {

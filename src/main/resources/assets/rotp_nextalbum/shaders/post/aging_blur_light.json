@@ -14,7 +14,7 @@
         },
         {
           "name": "Radius",
-          "values": [ 8.0 ]
+          "values": [ 3.5 ]
         }
       ]
     },
@@ -29,9 +29,33 @@
         },
         {
           "name": "Radius",
-          "values": [ 8.0 ]
+          "values": [ 3.5 ]
         }
       ]
+    },
+    {
+      "name": "color_convolve",
+      "intarget": "minecraft:main",
+      "outtarget": "swap",
+      "uniforms": [
+        {
+          "name": "Saturation",
+          "values": [ 0.92 ]
+        },
+        {
+          "name": "ColorScale",
+          "values": [ 1.03, 1.03, 1.04 ]
+        },
+        {
+          "name": "Offset",
+          "values": [ 0.012, 0.012, 0.016 ]
+        }
+      ]
+    },
+    {
+      "name": "blit",
+      "intarget": "swap",
+      "outtarget": "minecraft:main"
     }
   ]
 }

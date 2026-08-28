@@ -7,8 +7,6 @@ public final class NextAlbumConfigUtil {
 
     private NextAlbumConfigUtil() {}
 
-    // ==================== Revolver Settings ====================
-
     public static float getBulletDamageMultiplier() {
         return NextAlbumConfig.getCommonConfig().getBulletDamageMultiplier();
     }
@@ -36,8 +34,6 @@ public final class NextAlbumConfigUtil {
     public static int getMaxRicochetCount() {
         return NextAlbumConfig.getCommonConfig().maxRicochetCount.get();
     }
-
-    // ==================== Sex Pistols Settings ====================
 
     public static double getSexPistolsTargetSearchRange() {
         return NextAlbumConfig.getCommonConfig().getSexPistolsTargetSearchRange();

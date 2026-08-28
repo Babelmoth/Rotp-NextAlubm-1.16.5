@@ -10,7 +10,8 @@ public enum SexPistolsTargetMode {
     PLAYERS,
     HOSTILE,
     FRIENDLY,
-    ALL;
+    ALL,
+    AIM;
 
     public static SexPistolsTargetMode byId(int id) {
         SexPistolsTargetMode[] values = values();
@@ -32,6 +33,7 @@ public enum SexPistolsTargetMode {
             return entity instanceof MonsterEntity;
         case FRIENDLY:
             return !(entity instanceof PlayerEntity) && !(entity instanceof MonsterEntity);
+        case AIM:
         case ALL:
         default:
             return !(entity instanceof PlayerEntity && ((PlayerEntity) entity).isSpectator());

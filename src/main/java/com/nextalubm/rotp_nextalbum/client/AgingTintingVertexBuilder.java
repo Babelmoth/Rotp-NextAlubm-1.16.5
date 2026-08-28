@@ -2,18 +2,36 @@ package com.nextalubm.rotp_nextalbum.client;
 
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 
-
 public class AgingTintingVertexBuilder implements IVertexBuilder {
+    public enum Style {
+        ENTITY,
+        OBJECT
+    }
+
     private final IVertexBuilder delegate;
     private final float progress;
+    private final Style style;
 
     public AgingTintingVertexBuilder(IVertexBuilder delegate, float progress) {
+        this(delegate, progress, Style.OBJECT);
+    }
+
+    public AgingTintingVertexBuilder(IVertexBuilder delegate, float progress, Style style) {
         this.delegate = delegate;
-        this.progress = AgingVisualUtil.entityCurve(progress);
+        this.progress = Math.max(0F, Math.min(1F, progress));
+        this.style = style;
     }
 
     public static IVertexBuilder wrap(IVertexBuilder delegate, float progress) {
-        return progress > 0F ? new AgingTintingVertexBuilder(delegate, progress) : delegate;
+        return wrap(delegate, progress, Style.OBJECT);
+    }
+
+    public static IVertexBuilder wrapEntity(IVertexBuilder delegate, float progress) {
+        return wrap(delegate, progress, Style.ENTITY);
+    }
+
+    public static IVertexBuilder wrap(IVertexBuilder delegate, float progress, Style style) {
+        return progress > 0F ? new AgingTintingVertexBuilder(delegate, progress, style) : delegate;
     }
 
     @Override
@@ -28,7 +46,9 @@ public class AgingTintingVertexBuilder implements IVertexBuilder {
             delegate.color(red, green, blue, alpha);
             return this;
         }
-        int[] aged = getAgedColor(red, green, blue);
+        int[] aged = style == Style.ENTITY
+                ? AgingVisualUtil.ageEntityColor(red, green, blue, progress)
+                : AgingVisualUtil.ageObjectColor(red, green, blue, progress);
         delegate.color(aged[0], aged[1], aged[2], alpha);
         return this;
     }
@@ -60,43 +80,5 @@ public class AgingTintingVertexBuilder implements IVertexBuilder {
     @Override
     public void endVertex() {
         delegate.endVertex();
-    }
-
-    private int[] getAgedColor(int red, int green, int blue) {
-        float severity = progress;
-        float r = clamp01(red / 255F);
-        float g = clamp01(green / 255F);
-        float b = clamp01(blue / 255F);
-        float luminance = r * 0.299F + g * 0.587F + b * 0.114F;
-        float grayMix = clamp01(0.08F * severity + 0.12F * severity * severity);
-        r = mix(r, luminance, grayMix);
-        g = mix(g, luminance, grayMix);
-        b = mix(b, luminance, grayMix);
-        float pallor = clamp01(0.04F + luminance * 0.28F);
-        float agedR = clamp01(pallor + 0.22F);
-        float agedG = clamp01(pallor + 0.10F);
-        float agedB = clamp01(pallor - 0.10F);
-        float agedMix = 0.92F * severity;
-        r = mix(r, agedR, agedMix);
-        g = mix(g, agedG, agedMix);
-        b = mix(b, agedB, agedMix);
-        float dryness = 0.05F * severity;
-        r = clamp01(r + dryness * 0.85F);
-        g = clamp01(g + dryness * 0.30F);
-        b = clamp01(b - dryness);
-        return new int[] { toColorByte(r), toColorByte(g), toColorByte(b) };
-    }
-
-    private static float mix(float from, float to, float amount) {
-        float clamped = clamp01(amount);
-        return from * (1F - clamped) + to * clamped;
-    }
-
-    private static float clamp01(float value) {
-        return Math.max(0F, Math.min(1F, value));
-    }
-
-    private static int toColorByte(float value) {
-        return Math.max(0, Math.min(255, Math.round(clamp01(value) * 255F)));
     }
 }

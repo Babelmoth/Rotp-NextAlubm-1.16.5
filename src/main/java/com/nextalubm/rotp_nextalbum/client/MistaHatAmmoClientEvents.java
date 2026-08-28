@@ -2,8 +2,6 @@ package com.nextalubm.rotp_nextalbum.client;
 
 import java.util.List;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.nextalubm.rotp_nextalbum.NextAlubm;
 import com.nextalubm.rotp_nextalbum.item.MistaSuitArmorItem;
 import com.nextalubm.rotp_nextalbum.network.MistaHatAmmoClickPacket;
@@ -11,7 +9,6 @@ import com.nextalubm.rotp_nextalbum.network.NetworkHandler;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
-import net.minecraft.client.gui.AbstractGui;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.inventory.ContainerScreen;
 import net.minecraft.client.renderer.ItemRenderer;
@@ -25,32 +22,36 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.RenderTooltipEvent;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 
 @EventBusSubscriber(modid = NextAlubm.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.FORGE)
 public class MistaHatAmmoClientEvents {
     private static final int SLOT_SIZE = 18;
-    private static final int ICON_SIZE = 16;
-    private static final int BAR_HEIGHT = 5;
     private static final int TOOLTIP_IMAGE_LINES = 3;
-    private static final int BAR_BORDER_COLOR = 0xFF000000;
-    private static final int BAR_BACKGROUND_COLOR = 0xFF2C2430;
-    private static final int BAR_FILL_COLOR = 0xFF7088FF;
-    private static final int BAR_FULL_COLOR = 0xFFFF5555;
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onMouseClicked(GuiScreenEvent.MouseClickedEvent.Pre event) {
-        if (event.getButton() != 1) {
+        tryHandleAmmoClick(event.getGui(), event.getButton(), event);
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onMouseReleased(GuiScreenEvent.MouseReleasedEvent.Pre event) {
+        tryHandleAmmoClick(event.getGui(), event.getButton(), event);
+    }
+
+    private static void tryHandleAmmoClick(Screen screen, int button, Event event) {
+        if (button != 0) {
             return;
         }
-        Screen screen = event.getGui();
         if (!(screen instanceof ContainerScreen)) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
         ClientPlayerEntity player = mc.player;
-        if (player == null || player.isCreative()) {
+        if (player == null) {
             return;
         }
         ContainerScreen<?> containerScreen = (ContainerScreen<?>) screen;
@@ -58,23 +59,34 @@ public class MistaHatAmmoClientEvents {
         if (slot == null) {
             return;
         }
+
         ItemStack slotStack = slot.getItem();
         ItemStack carried = player.inventory.getCarried();
-        if (!canHandle(slotStack, carried)) {
-            return;
+        boolean isPlayerInv = slot.container == player.inventory;
+        int slotIndex = isPlayerInv ? slot.getSlotIndex() : slot.index;
+        ItemStack carriedCopy = carried.copy();
+
+        if (MistaSuitArmorItem.isAmmoContainer(slotStack) && MistaSuitArmorItem.isAmmoItem(carried)
+                && MistaSuitArmorItem.getRemainingAmmoCapacity(slotStack) > 0) {
+            NetworkHandler.CHANNEL.sendToServer(new MistaHatAmmoClickPacket(1, isPlayerInv, slotIndex, carriedCopy));
+            event.setCanceled(true);
+        } else if (MistaSuitArmorItem.isAmmoContainer(carried) && MistaSuitArmorItem.getStoredAmmo(carried) > 0
+                && (slotStack.isEmpty() || (MistaSuitArmorItem.isAmmoItem(slotStack)
+                && slotStack.getCount() < slotStack.getMaxStackSize()))) {
+            NetworkHandler.CHANNEL.sendToServer(new MistaHatAmmoClickPacket(2, isPlayerInv, slotIndex, carriedCopy));
+            event.setCanceled(true);
+        } else if (MistaSuitArmorItem.isAmmoContainer(carried)
+                && MistaSuitArmorItem.getRemainingAmmoCapacity(carried) > 0
+                && MistaSuitArmorItem.isAmmoItem(slotStack)) {
+            NetworkHandler.CHANNEL.sendToServer(new MistaHatAmmoClickPacket(3, isPlayerInv, slotIndex, slotStack.copy()));
+            event.setCanceled(true);
         }
-        int slotIndex = containerScreen.getMenu().slots.indexOf(slot);
-        if (slotIndex < 0) {
-            return;
-        }
-        NetworkHandler.CHANNEL.sendToServer(new MistaHatAmmoClickPacket(slotIndex));
-        event.setCanceled(true);
     }
 
     @SubscribeEvent
     public static void onItemTooltip(ItemTooltipEvent event) {
         ItemStack stack = event.getItemStack();
-        if (!MistaSuitArmorItem.isMistaHat(stack) || MistaSuitArmorItem.getStoredAmmo(stack) <= 0) {
+        if (!MistaSuitArmorItem.isAmmoContainer(stack) || MistaSuitArmorItem.getStoredAmmo(stack) <= 0) {
             return;
         }
         List<ITextComponent> tooltip = event.getToolTip();
@@ -87,25 +99,17 @@ public class MistaHatAmmoClientEvents {
     @SubscribeEvent
     public static void onRenderTooltipPostText(RenderTooltipEvent.PostText event) {
         ItemStack hatStack = event.getStack();
-        if (!MistaSuitArmorItem.isMistaHat(hatStack) || MistaSuitArmorItem.getStoredAmmo(hatStack) <= 0) {
+        if (!MistaSuitArmorItem.isAmmoContainer(hatStack) || MistaSuitArmorItem.getStoredAmmo(hatStack) <= 0) {
             return;
         }
         List<ItemStack> storedStacks = MistaSuitArmorItem.getStoredAmmoStacks(hatStack);
         if (storedStacks.isEmpty()) {
             return;
         }
-        MatrixStack matrixStack = event.getMatrixStack();
         int slotCount = Math.min(storedStacks.size(), 4);
         int left = event.getX();
         int top = event.getY() + getInsertedImageTop(event.getLines());
         renderItems(event, storedStacks, left, top, slotCount);
-    }
-
-    private static boolean canHandle(ItemStack slotStack, ItemStack carried) {
-        if (MistaSuitArmorItem.isMistaHat(slotStack)) {
-            return carried.isEmpty() ? MistaSuitArmorItem.getStoredAmmo(slotStack) > 0 : MistaSuitArmorItem.isAmmoItem(carried) && MistaSuitArmorItem.getRemainingAmmoCapacity(slotStack) > 0;
-        }
-        return MistaSuitArmorItem.isMistaHat(carried) && MistaSuitArmorItem.isAmmoItem(slotStack) && MistaSuitArmorItem.getRemainingAmmoCapacity(carried) > 0;
     }
 
     private static int findAttributeStart(List<ITextComponent> tooltip) {
@@ -140,12 +144,10 @@ public class MistaHatAmmoClientEvents {
         return Math.max(1, lines.size() - TOOLTIP_IMAGE_LINES);
     }
 
-
     private static void renderItems(RenderTooltipEvent.PostText event, List<ItemStack> storedStacks, int left, int top, int slotCount) {
         Minecraft mc = Minecraft.getInstance();
         ItemRenderer itemRenderer = mc.getItemRenderer();
         float oldBlitOffset = itemRenderer.blitOffset;
-        RenderSystem.enableDepthTest();
         itemRenderer.blitOffset = 450.0F;
         for (int i = 0; i < slotCount; i++) {
             ItemStack stack = storedStacks.get(i);
@@ -154,6 +156,5 @@ public class MistaHatAmmoClientEvents {
             itemRenderer.renderGuiItemDecorations(event.getFontRenderer(), stack, x, top);
         }
         itemRenderer.blitOffset = oldBlitOffset;
-        RenderSystem.disableDepthTest();
     }
 }

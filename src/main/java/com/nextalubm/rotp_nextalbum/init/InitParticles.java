@@ -24,5 +24,11 @@ public class InitParticles {
     public static final RegistryObject<BasicParticleType> REVOLVER_MUZZLE_FLASH = PARTICLES.register("revolver_muzzle_flash", () -> new BasicParticleType(true));
     public static final RegistryObject<BasicParticleType> KICK_MUZZLE_FLASH = PARTICLES.register("kick_muzzle_flash", () -> new BasicParticleType(true));
     public static final RegistryObject<BasicParticleType> KICK_MUZZLE_FLASH_CRITICAL = PARTICLES.register("kick_muzzle_flash_critical", () -> new BasicParticleType(true));
+    public static final RegistryObject<BasicParticleType> AGING_MIST = PARTICLES.register("aging_mist", () -> new BasicParticleType(false));
     public static final RegistryObject<BasicParticleType> STAND_RESOLVE_AURA = PARTICLES.register("stand_resolve_aura", () -> new BasicParticleType(false));
+    public static final RegistryObject<BasicParticleType> SOUND_GO_ORANGE = PARTICLES.register("sound_go_orange", () -> new BasicParticleType(true));
+    public static final RegistryObject<BasicParticleType> SOUND_DO_ORANGE = PARTICLES.register("sound_do_orange", () -> new BasicParticleType(true));
+    public static final RegistryObject<BasicParticleType> SOUND_BA_ORANGE = PARTICLES.register("sound_ba_orange", () -> new BasicParticleType(true));
+    public static final RegistryObject<BasicParticleType> SOUND_EN_ORANGE = PARTICLES.register("sound_en_orange", () -> new BasicParticleType(true));
+    public static final RegistryObject<BasicParticleType> SOUND_ZA_ORANGE = PARTICLES.register("sound_za_orange", () -> new BasicParticleType(true));
 }

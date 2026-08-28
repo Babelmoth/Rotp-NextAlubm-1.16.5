@@ -28,6 +28,7 @@ public class SexPistolsTargetModeAction extends StandAction {
     private final LazySupplier<ResourceLocation> hostileTexture = new LazySupplier<>(() -> new ResourceLocation(NextAlubm.MOD_ID, "textures/action/sex_pistols_target_hostile.png"));
     private final LazySupplier<ResourceLocation> friendlyTexture = new LazySupplier<>(() -> new ResourceLocation(NextAlubm.MOD_ID, "textures/action/sex_pistols_target_friendly.png"));
     private final LazySupplier<ResourceLocation> allTexture = new LazySupplier<>(() -> new ResourceLocation(NextAlubm.MOD_ID, "textures/action/sex_pistols_target_all.png"));
+    private final LazySupplier<ResourceLocation> aimTexture = new LazySupplier<>(() -> new ResourceLocation(NextAlubm.MOD_ID, "textures/action/sex_pistols_target_aim.png"));
 
     public SexPistolsTargetModeAction(Builder builder) {
         super(builder);
@@ -42,6 +43,8 @@ public class SexPistolsTargetModeAction extends StandAction {
             return friendlyTexture.get();
         case ALL:
             return allTexture.get();
+        case AIM:
+            return aimTexture.get();
         case PLAYERS:
         default:
             return playersTexture.get();

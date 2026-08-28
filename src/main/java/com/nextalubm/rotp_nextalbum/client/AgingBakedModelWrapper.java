@@ -7,8 +7,8 @@ import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import net.minecraft.block.Blocks;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.renderer.model.BakedQuad;
 import net.minecraft.client.renderer.model.IBakedModel;
 import net.minecraft.client.renderer.model.ItemCameraTransforms;
@@ -22,9 +22,10 @@ import net.minecraftforge.client.model.data.IModelData;
 
 public class AgingBakedModelWrapper implements IBakedModel {
 
-    private static final int WITHER_R = 0x6B;
-    private static final int WITHER_G = 0x45;
-    private static final int WITHER_B = 0x20;
+    private static final int WITHER_RGB = AgingVisualUtil.desaturateRgb(0x6B4520, 0.42F);
+    private static final int WITHER_R = (WITHER_RGB >> 16) & 0xFF;
+    private static final int WITHER_G = (WITHER_RGB >> 8) & 0xFF;
+    private static final int WITHER_B = WITHER_RGB & 0xFF;
 
     private static final int VERTEX_STRIDE = 8;
     private static final int VERTEX_COUNT = 4;
@@ -34,6 +35,10 @@ public class AgingBakedModelWrapper implements IBakedModel {
 
     public AgingBakedModelWrapper(IBakedModel original) {
         this.original = original;
+    }
+
+    public IBakedModel getOriginal() {
+        return original;
     }
 
     @Override

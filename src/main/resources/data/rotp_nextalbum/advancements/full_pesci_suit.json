@@ -1,0 +1,58 @@
+{
+  "parent": "jojo:jojo/summon_stand",
+  "criteria": {
+    "has_pesci_boots": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "item": "rotp_nextalbum:pesci_suit_boots"
+          }
+        ]
+      }
+    },
+    "has_pesci_pants": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "item": "rotp_nextalbum:pesci_suit_pants"
+          }
+        ]
+      }
+    },
+    "has_pesci_cloth": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "item": "rotp_nextalbum:pesci_suit_cloth"
+          }
+        ]
+      }
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "translate": "advancements.rotp_nextalbum.full_pesci_suit.description"
+    },
+    "frame": "task",
+    "hidden": false,
+    "icon": {
+      "item": "rotp_nextalbum:pesci_suit_cloth"
+    },
+    "show_toast": true,
+    "title": {
+      "translate": "advancements.rotp_nextalbum.full_pesci_suit.title"
+    }
+  },
+  "requirements": [
+    ["has_pesci_cloth"],
+    ["has_pesci_pants"],
+    ["has_pesci_boots"]
+  ],
+  "rewards": {
+    "experience": 200
+  }
+}

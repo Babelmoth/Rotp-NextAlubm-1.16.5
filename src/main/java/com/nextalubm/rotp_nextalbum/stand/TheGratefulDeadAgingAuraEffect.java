@@ -2,21 +2,20 @@ package com.nextalubm.rotp_nextalbum.stand;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import com.github.standobyte.jojo.action.non_stand.HamonOrganismInfusion;
 import com.github.standobyte.jojo.action.stand.effect.StandEffectInstance;
 import com.github.standobyte.jojo.action.stand.effect.StandEffectType;
 import com.github.standobyte.jojo.entity.stand.StandEntity;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
 import com.nextalubm.rotp_nextalbum.init.InitStandEffects;
-import com.nextalubm.rotp_nextalbum.util.AgingBlockTracker;
+import com.nextalubm.rotp_nextalbum.item.IceCubeItem;
 import com.nextalubm.rotp_nextalbum.util.AgingEntityUtil;
 import com.nextalubm.rotp_nextalbum.util.AgingItemUtil;
 import com.nextalubm.rotp_nextalbum.util.AgingSpeedUtil;
 
-import net.minecraft.block.BlockState;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
@@ -24,22 +23,16 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.gen.Heightmap;
 import net.minecraft.world.server.ServerWorld;
 
 public class TheGratefulDeadAgingAuraEffect extends StandEffectInstance {
     public static final double FALLBACK_RADIUS = 50.0D;
-    private static final int PLANT_COLUMNS_PER_TICK = 384;
+    public static final double EXPAND_BLOCKS_PER_TICK = 1.0D / 20.0D;
     private static final int ENTITY_TICK_INTERVAL = 4;
-    private static final int[] SURFACE_SCAN_Y_OFFSETS = new int[] {0, -1, -2, -3, -4, -6, -8, -12, -16};
-    private static final float AURA_FULL_AGING_TICKS = 2400.0F;
+    private static final float AURA_FULL_AGING_TICKS = 4800.0F;
     private static final float BASE_TICKS_PER_AURA_ENTITY = AURA_FULL_AGING_TICKS;
     private static final float BASE_TICKS_PER_AURA_ITEM = AgingItemUtil.BASE_TICKS_PER_ITEM * 30.0F;
-    private static final float BASE_TICKS_PER_AURA_BLOCK = AURA_FULL_AGING_TICKS;
 
-    private final Set<BlockPos> agedPlantUnitsThisCycle = new HashSet<>();
-    private int surfaceScanCursor;
-    private int surfaceScanSide;
     private int tickCounter;
 
     public TheGratefulDeadAgingAuraEffect() {
@@ -65,39 +58,63 @@ public class TheGratefulDeadAgingAuraEffect extends StandEffectInstance {
             return;
         }
         ServerWorld serverWorld = (ServerWorld) world;
-        if (AgingSpeedUtil.isColdBiome(serverWorld, user.blockPosition())) {
-            return;
-        }
-        double radius = getAuraRadius();
+        IStandPower power = IStandPower.getStandPowerOptional(user).orElse(null);
+        LivingEntity center = getAuraCenter(user, power);
+        double radius = getExpandedRadius(power, tickCount);
         tickCounter++;
         if (tickCounter % ENTITY_TICK_INTERVAL == 0) {
-            ageTargets(serverWorld, radius, ENTITY_TICK_INTERVAL);
+            ageTargets(serverWorld, center, radius, ENTITY_TICK_INTERVAL);
         }
-        agePlantBlockTargets(serverWorld, radius);
     }
 
-    private double getAuraRadius() {
-        IStandPower power = IStandPower.getStandPowerOptional(user).orElse(null);
+    public static LivingEntity getAuraCenter(LivingEntity user, IStandPower power) {
+        if (power != null && power.getStandManifestation() instanceof StandEntity) {
+            StandEntity stand = (StandEntity) power.getStandManifestation();
+            if (stand.isAlive()) {
+                return stand;
+            }
+        }
+        return user;
+    }
+
+    public static double getMaxAuraRadius(IStandPower power) {
         return Math.max(1.0D, NextAlbumStandStats.getAbilityRange(power));
     }
 
-    private void ageTargets(ServerWorld world, double radius, int tickMultiplier) {
+    public static double getExpandedRadius(IStandPower power, int expandTicks) {
+        return Math.min(getMaxAuraRadius(power), Math.max(0.0D, expandTicks * EXPAND_BLOCKS_PER_TICK));
+    }
+
+    public static Optional<TheGratefulDeadAgingAuraEffect> getActive(IStandPower power) {
+        if (power == null) {
+            return Optional.empty();
+        }
+        return power.getContinuousEffects().getEffectOfType(InitStandEffects.THE_GRATEFUL_DEAD_AGING_AURA.get());
+    }
+
+    public static double getExpandedRadius(IStandPower power) {
+        return getActive(power)
+                .map(effect -> getExpandedRadius(power, effect.tickCount))
+                .orElse(0.0D);
+    }
+
+    private void ageTargets(ServerWorld world, LivingEntity center, double radius, int tickMultiplier) {
         double radiusSq = radius * radius;
-        AxisAlignedBB box = user.getBoundingBox().inflate(radius);
+        AxisAlignedBB box = center.getBoundingBox().inflate(radius);
         Set<UUID> agedLivingTargets = new HashSet<>();
         List<LivingEntity> livingTargets = world.getEntitiesOfClass(LivingEntity.class, box,
-                entity -> entity.isAlive() && !entity.is(user) && entity.distanceToSqr(user) <= radiusSq);
+                entity -> entity.isAlive() && !entity.is(user) && entity.distanceToSqr(center) <= radiusSq);
         for (LivingEntity target : livingTargets) {
             ageLivingTarget(world, target, agedLivingTargets, tickMultiplier);
         }
         List<ItemEntity> itemTargets = world.getEntitiesOfClass(ItemEntity.class, box,
-                entity -> entity.isAlive() && entity.distanceToSqr(user) <= radiusSq
+                entity -> entity.isAlive() && entity.distanceToSqr(center) <= radiusSq
                         && AgingItemUtil.isAgeableLivingItem(entity.getItem()));
         for (ItemEntity item : itemTargets) {
             ageDroppedItemTarget(world, item, tickMultiplier);
         }
         List<ServerPlayerEntity> playerTargets = world.getEntitiesOfClass(ServerPlayerEntity.class, box,
-                player -> player.isAlive() && !player.is(user) && player.distanceToSqr(user) <= radiusSq);
+                player -> player.isAlive() && !player.is(user) && player.distanceToSqr(center) <= radiusSq);
         for (ServerPlayerEntity player : playerTargets) {
             agePlayerInventoryTarget(world, player, tickMultiplier);
         }
@@ -114,7 +131,7 @@ public class TheGratefulDeadAgingAuraEffect extends StandEffectInstance {
             return;
         }
         BlockPos pos = ageableTarget.blockPosition();
-        float speedMul = AgingEntityUtil.getEntityAgingSpeedMultiplier(world, pos);
+        float speedMul = AgingEntityUtil.getEntityAgingSpeedMultiplier(ageableTarget);
         if (speedMul <= 0F) {
             return;
         }
@@ -140,11 +157,14 @@ public class TheGratefulDeadAgingAuraEffect extends StandEffectInstance {
     }
 
     private void agePlayerInventoryTarget(ServerWorld world, ServerPlayerEntity player, int tickMultiplier) {
-        BlockPos pos = player.blockPosition();
-        float speedMul = AgingSpeedUtil.getTotalAgingSpeedMultiplier(world, pos);
+        if (IceCubeItem.protectsInventory(player)) {
+            return;
+        }
+        float speedMul = AgingSpeedUtil.getTotalAgingSpeedMultiplier(player);
         if (speedMul <= 0F) {
             return;
         }
+        BlockPos pos = player.blockPosition();
         UUID ownerUuid = user.getUUID();
         float delta = speedMul * tickMultiplier / BASE_TICKS_PER_AURA_ITEM;
         boolean changed = ageInventoryList(world, pos, player.inventory.items, ownerUuid, delta);
@@ -176,69 +196,6 @@ public class TheGratefulDeadAgingAuraEffect extends StandEffectInstance {
             changed = true;
         }
         return changed;
-    }
-
-    private void agePlantBlockTargets(ServerWorld world, double radius) {
-        int scanRadius = Math.max(1, (int) Math.ceil(radius));
-        int side = scanRadius * 2 + 1;
-        int scanArea = side * side;
-        if (side != surfaceScanSide || surfaceScanCursor >= scanArea) {
-            surfaceScanSide = side;
-            surfaceScanCursor = 0;
-            agedPlantUnitsThisCycle.clear();
-        }
-        BlockPos origin = user.blockPosition();
-        UUID ownerUuid = user.getUUID();
-        double radiusSq = radius * radius;
-        float scanDeltaTicks = Math.max(1F, scanArea / (float) PLANT_COLUMNS_PER_TICK);
-        BlockPos.Mutable mutable = new BlockPos.Mutable();
-        for (int i = 0; i < PLANT_COLUMNS_PER_TICK; i++) {
-            if (surfaceScanCursor >= scanArea) {
-                surfaceScanCursor = 0;
-                agedPlantUnitsThisCycle.clear();
-            }
-            int index = surfaceScanCursor++;
-            int dx = index % side - scanRadius;
-            int dz = index / side - scanRadius;
-            if (dx * dx + dz * dz > radiusSq) {
-                continue;
-            }
-            int x = origin.getX() + dx;
-            int z = origin.getZ() + dz;
-            if (!world.hasChunk(x >> 4, z >> 4)) {
-                continue;
-            }
-            int topY = world.getHeight(Heightmap.Type.WORLD_SURFACE, x, z) - 1;
-            for (int yOffset : SURFACE_SCAN_Y_OFFSETS) {
-                int y = topY + yOffset;
-                if (y < 0 || y >= world.getMaxBuildHeight()) {
-                    continue;
-                }
-                double dy = y + 0.5D - user.getY();
-                if (dx * dx + dy * dy + dz * dz > radiusSq) {
-                    continue;
-                }
-                mutable.set(x, y, z);
-                BlockState state = world.getBlockState(mutable);
-                if (!HamonOrganismInfusion.isBlockLiving(state)) {
-                    continue;
-                }
-                BlockPos unitPos = AgingBlockTracker.getAuraAgingUnitPos(world, mutable, state);
-                if (!agedPlantUnitsThisCycle.add(unitPos)) {
-                    continue;
-                }
-                BlockState unitState = world.getBlockState(unitPos);
-                if (!HamonOrganismInfusion.isBlockLiving(unitState)) {
-                    continue;
-                }
-                float speedMul = AgingSpeedUtil.getTotalAgingSpeedMultiplier(world, unitPos);
-                if (speedMul <= 0F) {
-                    continue;
-                }
-                AgingBlockTracker.addAuraUnitProgress(world, unitPos, ownerUuid,
-                        speedMul * scanDeltaTicks / BASE_TICKS_PER_AURA_BLOCK);
-            }
-        }
     }
 
     @Override

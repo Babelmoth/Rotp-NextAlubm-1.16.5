@@ -1,7 +1,7 @@
 {
-  "type": "jojo:crafting_shaped_stand",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
-    "ebb",
+    " bb",
     "cdc",
     "aac"
   ],
@@ -17,16 +17,8 @@
     },
      "d":{
       "tag": "forge:storage_blocks/iron"
-    },
-     "e":{
-      "tag": "forge:dyes/purple"
     }
   },
-  "stand": [
-    {
-      "name": "rotp_nextalbum:sex_pistols"
-    }
-  ],
   "result": {
     "item": "rotp_nextalbum:revolver"
   }

@@ -6,7 +6,6 @@ import net.minecraft.particles.RedstoneParticleData;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.server.ServerWorld;
 
-/** Dark brown dust burst used when fully-aged plants crumble on contact. */
 public final class AgingDustParticleSpawner {
 
     private static final RedstoneParticleData DUST = new RedstoneParticleData(0.18F, 0.10F, 0.035F, 1.15F);

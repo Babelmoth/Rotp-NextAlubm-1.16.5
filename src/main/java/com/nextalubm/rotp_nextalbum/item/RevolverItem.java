@@ -8,8 +8,9 @@ import javax.annotation.Nullable;
 import com.github.standobyte.jojo.client.ClientUtil;
 import com.github.standobyte.jojo.init.ModItems;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
+import com.nextalubm.rotp_nextalbum.NextAlbumConfig;
+import com.nextalubm.rotp_nextalbum.client.RevolverClientAnim;
 import com.nextalubm.rotp_nextalbum.client.RevolverClientEvents;
-import com.nextalubm.rotp_nextalbum.client.render.RevolverGeoRenderer;
 import com.nextalubm.rotp_nextalbum.entity.RevolverBulletEntity;
 import com.nextalubm.rotp_nextalbum.init.InitItems;
 import com.nextalubm.rotp_nextalbum.init.InitSounds;
@@ -21,6 +22,7 @@ import com.nextalubm.rotp_nextalbum.stand.SexPistolsStandType;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsItemAttachmentUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsSoundUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsStaminaUtil;
+import com.nextalubm.rotp_nextalbum.util.SexPistolsJoyfulUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsResolveUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsStandUtil;
 
@@ -76,19 +78,6 @@ public class RevolverItem extends Item implements IAnimatable {
 
     private static final int MAX_AMMO = 6;
     private static final int FULL_CHAMBERS = (1 << MAX_AMMO) - 1;
-    private static final int SHOT_COOLDOWN_TICKS = 5;
-    private static final int RELOAD_COOLDOWN_TICKS = 10;
-    private static final float RECOIL_PITCH = 5.35F;
-    private static final float RECOIL_YAW = 1.75F;
-    private static final float BULLET_SPEED = 5.9F;
-    private static final double BULLET_SPAWN_FORWARD_OFFSET = 0.45D;
-
-    private static final float AIM_ZOOM_MODIFIER = 1.85F;
-
-    private static final double MELEE_RANGE = 2.75D;
-    private static final double MELEE_TRACE_RADIUS = 0.65D;
-    private static final float MELEE_DAMAGE = 1.0F;
-    private static final double MELEE_KNOCKBACK = 0.45D;
 
     private final RevolverStats stats;
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
@@ -130,6 +119,9 @@ public class RevolverItem extends Item implements IAnimatable {
             return ActionResult.pass(stack);
         }
         if (isReloadMode(stack)) {
+            if (!canReload(player, stack)) {
+                return ActionResult.fail(stack);
+            }
             if (!world.isClientSide) {
                 if (player.isShiftKeyDown()) {
                     handleServerExtractChamber((ServerPlayerEntity) player, stack);
@@ -290,6 +282,9 @@ public class RevolverItem extends Item implements IAnimatable {
 
     public void handleServerToggleReloadMode(ServerPlayerEntity player, ItemStack stack) {
         normalizeChambers(stack);
+        if (!canReload(player, stack)) {
+            return;
+        }
         boolean reloadMode = !isReloadMode(stack);
         setReloadMode(stack, reloadMode);
         if (reloadMode) {
@@ -311,9 +306,9 @@ public class RevolverItem extends Item implements IAnimatable {
         if (target == null) {
             return;
         }
-        if (target.hurt(DamageSource.playerAttack(player), MELEE_DAMAGE)) {
+        if (target.hurt(DamageSource.playerAttack(player), this.stats.meleeDamage * NextAlbumConfig.getCommonConfigInstance(false).getMeleeDamageMultiplier())) {
             Vector3d look = player.getLookAngle();
-            target.setDeltaMovement(target.getDeltaMovement().add(look.x * MELEE_KNOCKBACK, 0.12D, look.z * MELEE_KNOCKBACK));
+            target.setDeltaMovement(target.getDeltaMovement().add(look.x * this.stats.meleeKnockback, 0.12D, look.z * this.stats.meleeKnockback));
             target.hasImpulse = true;
             target.hurtMarked = true;
             player.swing(Hand.MAIN_HAND, true);
@@ -324,19 +319,19 @@ public class RevolverItem extends Item implements IAnimatable {
     private LivingEntity findMeleeTarget(ServerPlayerEntity player) {
         Vector3d eye = player.getEyePosition(1.0F);
         Vector3d look = player.getLookAngle();
-        Vector3d reach = eye.add(look.scale(MELEE_RANGE));
-        AxisAlignedBB area = player.getBoundingBox().expandTowards(look.scale(MELEE_RANGE)).inflate(MELEE_TRACE_RADIUS);
+        Vector3d reach = eye.add(look.scale(this.stats.meleeRange));
+        AxisAlignedBB area = player.getBoundingBox().expandTowards(look.scale(this.stats.meleeRange)).inflate(this.stats.meleeTraceRadius);
         LivingEntity bestTarget = null;
-        double bestDistance = MELEE_RANGE * MELEE_RANGE;
+        double bestDistance = this.stats.meleeRange * this.stats.meleeRange;
         for (LivingEntity target : player.level.getEntitiesOfClass(LivingEntity.class, area, target -> target != player && target.isAlive() && !target.isSpectator() && target.isPickable())) {
             Vector3d center = target.getBoundingBox().getCenter();
             double distance = distanceToSegmentSqr(center, eye, reach);
-            double allowed = Math.max(MELEE_TRACE_RADIUS, target.getBbWidth() * 0.5D + MELEE_TRACE_RADIUS);
+            double allowed = Math.max(this.stats.meleeTraceRadius, target.getBbWidth() * 0.5D + this.stats.meleeTraceRadius);
             if (distance > allowed * allowed) {
                 continue;
             }
             double forwardDistance = center.subtract(eye).dot(look);
-            if (forwardDistance < 0.0D || forwardDistance > MELEE_RANGE) {
+            if (forwardDistance < 0.0D || forwardDistance > this.stats.meleeRange) {
                 continue;
             }
             double distanceToPlayer = player.distanceToSqr(target);
@@ -372,6 +367,30 @@ public class RevolverItem extends Item implements IAnimatable {
             return;
         }
         setSelectedChamber(stack, target);
+        if (MistaSuitArmorItem.isSpeedloaderReady(player)) {
+            int empty = countEmptyChambers(stack);
+            int loaded = 0;
+            int selected = getSelectedChamber(stack);
+            for (int i = 0; i < MAX_AMMO && loaded < empty; i++) {
+                int chamber = Math.floorMod(selected + i, MAX_AMMO);
+                if (hasBullet(stack, chamber)) {
+                    continue;
+                }
+                if (!consumeAmmoItem(player)) {
+                    break;
+                }
+                setChamberLoaded(stack, chamber, true);
+                setChamberSpent(stack, chamber, false);
+                loaded++;
+            }
+            if (loaded <= 0) {
+                player.level.playSound(null, player.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundCategory.PLAYERS, 0.45F, 1.0F);
+                return;
+            }
+            applyReloadCooldown(player, stack);
+            player.level.playSound(null, player.blockPosition(), InitSounds.REVOLVER_SPEEDLOADER.get(), SoundCategory.PLAYERS, 0.85F, 1.0F);
+            return;
+        }
         if (!consumeAmmoItem(player)) {
             player.level.playSound(null, player.blockPosition(), SoundEvents.DISPENSER_FAIL, SoundCategory.PLAYERS, 0.45F, 1.0F);
             return;
@@ -476,6 +495,9 @@ public class RevolverItem extends Item implements IAnimatable {
         if (!isReloadMode(stack)) {
             return;
         }
+        if (!canReload(player, stack)) {
+            return;
+        }
         advanceChamber(stack, forward);
         player.level.playSound(null, player.blockPosition(), SoundEvents.ITEM_FRAME_ROTATE_ITEM, SoundCategory.PLAYERS, 0.5F, forward ? 1.15F : 0.9F);
     }
@@ -556,21 +578,27 @@ public class RevolverItem extends Item implements IAnimatable {
         }
         RevolverBulletEntity bullet = new RevolverBulletEntity(player.level, player);
         bullet.setLoadedSexPistolsMask(pistolMask);
+        bullet.captureSexPistolsFireTarget(player);
         bullet.setEncirclementBullet(encirclement);
         bullet.setPiercingShotBullet(piercingShot);
         bullet.setSplittingShotBullet(splittingShot);
-        float finalInaccuracy = (isAiming(stack) ? 0.3F : 0.9F) * SexPistolsResolveUtil.getBulletInaccuracyMultiplier(player) * this.stats.inaccuracy;
+        float finalInaccuracy = (isAiming(stack) ? this.stats.adsInaccuracy : this.stats.hipInaccuracy) * SexPistolsResolveUtil.getBulletInaccuracyMultiplier(player);
         Vector3d direction = Vector3d.directionFromRotation(pitch, yaw);
-        Vector3d spawnPos = player.getEyePosition(1.0F).add(direction.scale(BULLET_SPAWN_FORWARD_OFFSET));
+        Vector3d spawnPos = player.getEyePosition(1.0F).add(direction.scale(this.stats.bulletSpawnForwardOffset));
         bullet.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
         bullet.xOld = spawnPos.x;
         bullet.yOld = spawnPos.y;
         bullet.zOld = spawnPos.z;
+        bullet.applyGunStats(this.stats);
         bullet.shootFromRotation(player, pitch, yaw, 0.0F, this.stats.bulletSpeed, finalInaccuracy);
         bullet.setBaseDamage(piercingShot ? this.stats.piercingDamage : this.stats.baseDamage);
+        boolean critical = rollGunCritical(player, stack);
+        bullet.setDamageCritical(critical);
         player.level.addFreshEntity(bullet);
-        NetworkHandler.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player), new RevolverMuzzleFlashPacket(player.getId(), isAiming(stack), player.getRandom().nextFloat()));
-        player.level.playSound(null, player.blockPosition(), InitSounds.REVOLVER_FIRE.get(), SoundCategory.PLAYERS, 0.95F, 1.0F);
+        NetworkHandler.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player), new RevolverMuzzleFlashPacket(player.getId(), isAiming(stack), player.getRandom().nextFloat(), critical));
+        player.level.playSound(null, player.blockPosition(),
+                this.stats.heavyFireSound ? InitSounds.REVOLVER_SHOT.get() : InitSounds.REVOLVER_FIRE.get(),
+                SoundCategory.PLAYERS, this.stats.heavyFireSound ? 1.15F : 0.95F, this.stats.heavyFireSound ? 0.92F : 1.0F);
         if (pistolMask != 0) {
             SexPistolsSoundUtil.sayLoadedFire(player);
         }
@@ -597,14 +625,17 @@ public class RevolverItem extends Item implements IAnimatable {
         if (player == null) return;
 
         RevolverClientEvents.addRecoil(gun.getPitchRecoil(stack), gun.getYawRecoil(stack, player.getRandom().nextFloat()));
+        RevolverClientAnim.addGunKick(gun.getStats());
     }
 
-    private float getPitchRecoil(ItemStack stack) {
-        return this.stats.recoilPitch * (isAiming(stack) ? 0.74F : 1.0F);
+    public float getPitchRecoil(ItemStack stack) {
+        float adsMul = isAiming(stack) ? this.stats.adsRecoilPitchMul : 1.0F;
+        return this.stats.recoilPitch * adsMul * NextAlbumConfig.getCommonConfigInstance(false).getRecoilMultiplier();
     }
 
-    private float getYawRecoil(ItemStack stack, float randomValue) {
-        return (randomValue - 0.5F) * this.stats.recoilYaw * (isAiming(stack) ? 0.55F : 1.0F);
+    public float getYawRecoil(ItemStack stack, float randomValue) {
+        float adsMul = isAiming(stack) ? this.stats.adsRecoilYawMul : 1.0F;
+        return (randomValue - 0.5F) * this.stats.recoilYaw * adsMul * NextAlbumConfig.getCommonConfigInstance(false).getRecoilMultiplier();
     }
 
     private void giveAmmoItem(PlayerEntity player) {
@@ -622,26 +653,25 @@ public class RevolverItem extends Item implements IAnimatable {
                 return true;
             }
         }
-        return consumeAmmoFromMistaHat(player);
+        return MistaSuitArmorItem.consumeAmmoFromPlayer(player, 1) > 0;
     }
 
-    private boolean consumeAmmoFromMistaHat(PlayerEntity player) {
-        for (ItemStack armorStack : player.inventory.armor) {
-            if (MistaSuitArmorItem.consumeOneAmmo(armorStack)) {
-                return true;
+    private int countEmptyChambers(ItemStack stack) {
+        int empty = 0;
+        for (int i = 0; i < MAX_AMMO; i++) {
+            if (!hasBullet(stack, i)) {
+                empty++;
             }
         }
-        for (ItemStack inventoryStack : player.inventory.items) {
-            if (MistaSuitArmorItem.consumeOneAmmo(inventoryStack)) {
-                return true;
-            }
+        return empty;
+    }
+
+    private boolean rollGunCritical(ServerPlayerEntity player, ItemStack stack) {
+        float chance = SexPistolsJoyfulUtil.getSexPistolsCriticalChance(player) + this.stats.criticalBonus;
+        if (chance <= 0.0F) {
+            return false;
         }
-        for (ItemStack offhandStack : player.inventory.offhand) {
-            if (MistaSuitArmorItem.consumeOneAmmo(offhandStack)) {
-                return true;
-            }
-        }
-        return false;
+        return player.getRandom().nextFloat() < Math.min(1.0F, chance);
     }
 
     private static int findNextEmptyChamber(ItemStack stack, int start) {
@@ -925,8 +955,15 @@ public class RevolverItem extends Item implements IAnimatable {
         return entity != null && !stack.isEmpty() && entity.getUseItem() == stack && entity.getUseItemRemainingTicks() > 0 && isAiming(stack);
     }
 
+    public static float getAimZoomModifier(ItemStack stack) {
+        if (stack.getItem() instanceof RevolverItem) {
+            return ((RevolverItem) stack.getItem()).stats.adsZoom;
+        }
+        return 1.85F;
+    }
+
     public static float getAimZoomModifier() {
-        return AIM_ZOOM_MODIFIER;
+        return 1.85F;
     }
 
     public static int getShotCooldown(ItemStack stack) {
@@ -954,7 +991,11 @@ public class RevolverItem extends Item implements IAnimatable {
     }
 
     public static void applyReloadCooldown(ItemStack stack) {
-        setReloadCooldown(stack, this.stats.reloadCooldownTicks);
+        int ticks = 10;
+        if (stack.getItem() instanceof RevolverItem) {
+            ticks = ((RevolverItem) stack.getItem()).stats.reloadCooldownTicks;
+        }
+        setReloadCooldown(stack, ticks);
     }
 
     public static void applyReloadCooldown(LivingEntity user, ItemStack stack) {
@@ -966,7 +1007,11 @@ public class RevolverItem extends Item implements IAnimatable {
         }
     }
 
-    private int getShotCooldownTicks(LivingEntity user) {
+    public static boolean canFire(ItemStack stack) {
+        return stack.getItem() instanceof RevolverItem && getShotCooldown(stack) <= 0 && !isReloadMode(stack);
+    }
+
+    public int getShotCooldownTicks(LivingEntity user) {
         return SexPistolsResolveUtil.getShotCooldownTicks(user, this.stats.shotCooldownTicks);
     }
 
@@ -995,6 +1040,23 @@ public class RevolverItem extends Item implements IAnimatable {
     public void appendHoverText(ItemStack stack, @Nullable World world, List<ITextComponent> tooltip, ITooltipFlag flag) {
         tooltip.add(new TranslationTextComponent("item.nextalbum.revolver.tooltips",
                 new KeybindTextComponent("key.mouse.left"),new KeybindTextComponent("key.mouse.right"),new KeybindTextComponent("key.rotp_nextalbum.reload_revolver"),new KeybindTextComponent("key.mouse.middle")).withStyle(TextFormatting.GRAY));
+        if (this == InitItems.MISTA_REVOLVER.get()) {
+            tooltip.add(CharacterSuitTooltips.effectLine(MistaSuitArmorItem.THEME_COLOR,
+                    "item.nextalbum.suit.effect.lucky_gunner", 1, 1,
+                    "item.nextalbum.suit.effect.lucky_gunner.desc"));
+        }
+        if (flag.isAdvanced()) {
+            tooltip.add(new TranslationTextComponent("item.nextalbum.revolver.stats.damage",
+                    String.format("%.1f", this.stats.closeDamage),
+                    String.format("%.1f", this.stats.baseDamage),
+                    String.format("%.1f", this.stats.minDistanceDamage)).withStyle(TextFormatting.DARK_GRAY));
+            tooltip.add(new TranslationTextComponent("item.nextalbum.revolver.stats.range",
+                    String.format("%.0f", this.stats.closeRange),
+                    String.format("%.0f", this.stats.stableRange)).withStyle(TextFormatting.DARK_GRAY));
+            tooltip.add(new TranslationTextComponent("item.nextalbum.revolver.stats.recoil",
+                    String.format("%.1f", this.stats.recoilPitch),
+                    String.format("%.1f", this.stats.recoilYaw)).withStyle(TextFormatting.DARK_GRAY));
+        }
         ClientUtil.addItemReferenceQuote(tooltip, this);
     }
 

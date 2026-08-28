@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.nextalubm.rotp_nextalbum.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "plugin": "com.nextalubm.rotp_nextalbum.mixin.NextAlbumMixinPlugin",
+  "refmap": "rotp_nextalbum.refmap.json",
+  "client": [
+    "client.SodiumBlockRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

@@ -17,7 +17,8 @@ import net.minecraft.world.server.ServerWorld;
 @Mixin(BoneMealItem.class)
 public abstract class BoneMealItemAgedGrowthMixin {
 
-    @Inject(method = "applyBonemeal", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "applyBonemeal(Lnet/minecraft/item/ItemStack;Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/entity/player/PlayerEntity;)Z",
+            at = @At("HEAD"), cancellable = true, remap = false)
     private static void rotpNextAlbum$preventAgedBlockBonemeal(ItemStack stack, World world, BlockPos pos,
                                                               PlayerEntity player,
                                                               CallbackInfoReturnable<Boolean> cir) {

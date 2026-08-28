@@ -1,0 +1,27 @@
+{
+  "type": "jojo:crafting_shaped_stand",
+  "pattern": [
+    "aaa",
+    "aba",
+    "aca"
+  ],
+  "key": {
+    "a": {
+      "item": "minecraft:leather"
+    },
+     "b":{
+      "tag": "forge:dyes/purple"
+    },
+     "c":{
+      "tag": "forge:dyes/black"
+    }
+  },
+  "stand": [
+    {
+      "name": "rotp_nextalbum:the_grateful_dead"
+    }
+  ],
+  "result": {
+    "item": "rotp_nextalbum:prosciutto_suit_pants"
+  }
+}

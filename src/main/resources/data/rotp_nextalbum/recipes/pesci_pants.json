@@ -1,0 +1,27 @@
+{
+  "type": "jojo:crafting_shaped_stand",
+  "pattern": [
+    "aaa",
+    "aba",
+    "aca"
+  ],
+  "key": {
+    "a": {
+      "item": "minecraft:leather"
+    },
+     "b":{
+      "tag": "forge:dyes/orange"
+    },
+     "c":{
+      "tag": "forge:dyes/black"
+    }
+  },
+  "stand": [
+    {
+      "name": "rotp_nextalbum:beach_boy"
+    }
+  ],
+  "result": {
+    "item": "rotp_nextalbum:pesci_suit_pants"
+  }
+}

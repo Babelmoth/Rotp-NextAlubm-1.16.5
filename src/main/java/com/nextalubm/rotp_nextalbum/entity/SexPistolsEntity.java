@@ -14,6 +14,7 @@ import com.nextalubm.rotp_nextalbum.client.KickMuzzleFlashClientHandler;
 import com.nextalubm.rotp_nextalbum.client.SexPistolsAnimationClientHandler;
 import com.nextalubm.rotp_nextalbum.action.SexPistolsMoveSelectedAction;
 import com.nextalubm.rotp_nextalbum.init.InitSounds;
+import com.nextalubm.rotp_nextalbum.item.IceCubeItem;
 import com.nextalubm.rotp_nextalbum.stand.SexPistolsEntities;
 import com.nextalubm.rotp_nextalbum.stand.SexPistolsStandType;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsJoyfulUtil;
@@ -103,6 +104,7 @@ public class SexPistolsEntity extends StandEntity implements IEntityAdditionalSp
     private boolean pendingBegging = false;
     private UUID beggingPlayerId;
     private UUID itemPickupTargetId;
+    private boolean itemRetrieveKeepRemote;
     private int beggingVoiceCooldown;
     private int eatAnimationTicks;
     private int eatAnimationVariant;
@@ -140,6 +142,7 @@ public class SexPistolsEntity extends StandEntity implements IEntityAdditionalSp
         tickIdleRandomAnimation();
         tickRecoveryAnimation();
         tickItemRetrieval();
+        tickCarriedIceCube();
         tickReturnToUserMovement();
         tickRemoteStandbyGlow();
         tickFeedingBehavior();
@@ -356,6 +359,9 @@ public class SexPistolsEntity extends StandEntity implements IEntityAdditionalSp
     public void returnToUserAfterKick() {
         LivingEntity user = getUser();
         if (user == null) {
+            return;
+        }
+        if (isRemotePositionFixed() && !isManuallyControlled()) {
             return;
         }
         if (isRemotePositionFixed() || isManuallyControlled()) {
@@ -704,23 +710,54 @@ public class SexPistolsEntity extends StandEntity implements IEntityAdditionalSp
     }
 
     public void startRetrievingItem(ItemEntity itemEntity) {
+        startRetrievingItem(itemEntity, isRemoteStay());
+    }
+
+    public void startRetrievingItem(ItemEntity itemEntity, boolean keepRemote) {
         if (level.isClientSide || itemEntity == null || itemEntity.removed || !itemEntity.isAlive() || itemEntity.getItem().isEmpty() || hasCarriedItem()) {
             return;
         }
         itemPickupTargetId = itemEntity.getUUID();
+        itemRetrieveKeepRemote = keepRemote;
         SexPistolsMoveSelectedAction.setItemRetrieved(itemEntity, true);
         returnToUserDelayTicks = 0;
         returnToUserTicks = 0;
         returnToUserOrigin = null;
-        setManualControl(false, true);
+        if (!keepRemote) {
+            setManualControl(false, true);
+        }
         setDeltaMovement(Vector3d.ZERO);
     }
 
+    public boolean isRemoteStay() {
+        return isRemotePositionFixed() && !isManuallyControlled();
+    }
+
+    public boolean isNearUserForItemGive() {
+        LivingEntity user = getUser();
+        return user != null && user.isAlive() && distanceToSqr(user) <= 9.0D;
+    }
+
     public boolean deliverCarriedItem() {
+        if (isRemoteStay() && !isNearUserForItemGive()) {
+            return dropCarriedItem();
+        }
         if (!giveCarriedItemToUser()) {
             return false;
         }
-        returnToUserAfterKick();
+        if (!isRemoteStay()) {
+            returnToUserAfterKick();
+        }
+        return true;
+    }
+
+    public boolean dropCarriedItem() {
+        ItemStack carried = getCarriedItem();
+        if (carried.isEmpty()) {
+            return false;
+        }
+        entityData.set(CARRIED_ITEM, ItemStack.EMPTY);
+        spawnAtLocation(carried);
         return true;
     }
 
@@ -811,6 +848,7 @@ public class SexPistolsEntity extends StandEntity implements IEntityAdditionalSp
                 SexPistolsMoveSelectedAction.setItemRetrieved((ItemEntity) targetEntity, false);
             }
             itemPickupTargetId = null;
+            itemRetrieveKeepRemote = false;
             setManualControl(false, false);
             return;
         }
@@ -824,14 +862,38 @@ public class SexPistolsEntity extends StandEntity implements IEntityAdditionalSp
             entityData.set(CARRIED_ITEM, stack);
             itemPickupTargetId = null;
             itemEntity.remove();
-            setManualControl(false, false);
-            returnToUserAfterKick();
+            if (itemRetrieveKeepRemote || isRemoteStay()) {
+                setManualControl(false, true);
+            }
+            else {
+                setManualControl(false, false);
+                returnToUserAfterKick();
+            }
+            itemRetrieveKeepRemote = false;
             return;
         }
         double speed = MathHelper.clamp(distance * 0.28D, 0.12D, 0.46D);
         Vector3d movement = toTarget.normalize().scale(Math.min(speed, distance));
         moveToCommandPosition(current.add(movement), movement);
     }
+
+    private void tickCarriedIceCube() {
+        if (level.isClientSide || !hasCarriedItem()) {
+            return;
+        }
+        ItemStack carried = getCarriedItem();
+        if (!IceCubeItem.isIceCube(carried)) {
+            return;
+        }
+        IceCubeItem.tickHeldBy(carried, level, this);
+        if (carried.isEmpty()) {
+            entityData.set(CARRIED_ITEM, ItemStack.EMPTY);
+        }
+        else {
+            entityData.set(CARRIED_ITEM, carried);
+        }
+    }
+
     public ItemStack getEatingItem() {
         return entityData.get(EATING_ITEM);
     }

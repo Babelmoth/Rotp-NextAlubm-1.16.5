@@ -35,6 +35,8 @@ import com.nextalubm.rotp_nextalbum.network.SexPistolsScoutGlowPacket;
 import com.nextalubm.rotp_nextalbum.particle.BulletHoleParticleData;
 import com.nextalubm.rotp_nextalbum.stand.SexPistolsEntities;
 import com.nextalubm.rotp_nextalbum.stand.SexPistolsStandType;
+import com.nextalubm.rotp_nextalbum.util.RevolverBulletRedstoneUtil;
+import com.nextalubm.rotp_nextalbum.util.SexPistolsAimUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsBulletRedirectUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsJoyfulUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsStandUtil;
@@ -43,6 +45,7 @@ import com.nextalubm.rotp_nextalbum.util.SexPistolsTransferOrder;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsSoundUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsStaminaUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsResolveUtil;
+import com.nextalubm.rotp_nextalbum.item.RevolverStats;
 import com.nextalubm.rotp_nextalbum.NextAlbumConfig;
 
 import net.minecraft.block.Block;
@@ -65,6 +68,7 @@ import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.particles.ParticleTypes;
 import net.minecraft.potion.EffectInstance;
+import net.minecraft.potion.Effects;
 import net.minecraft.util.CombatRules;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.Direction;
@@ -93,8 +97,6 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     private static final Random RANDOM = new Random();
 
     private static final int MAX_LIFETIME_TICKS = 120;
-    private static final int MAX_RICOCHETS = NextAlbumConfig.getCommonConfigInstance(false).maxRicochetCount.get().intValue();
-    private static final long BLOCK_DAMAGE_MEMORY_TICKS =  NextAlbumConfig.getCommonConfigInstance(false).blockDamageMemoryTicks.get().intValue();
     private static final double GRAVITY_COMPENSATION = 0.032D;
     private static final double RICOCHET_MIN_SPEED_SQR = 0.04D;
     private static final double RICOCHET_SURFACE_OFFSET = 0.18D;
@@ -115,19 +117,24 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
 
     private static final int SEX_PISTOLS_STAND_COLOR = 0xe75d2f;
 
+    private static final float HIT_BLEED_CHANCE = 0.28F;
+    private static final float HIT_SLOW_CHANCE = 0.22F;
+    private static final int HIT_BLEED_TICKS = 80;
+    private static final int HIT_SLOW_TICKS = 50;
+
     private static final double CRITICAL_KICK_SPEED_SCALE = 1.15D;
-    private static final double CLOSE_DAMAGE_DROP_DISTANCE =  NextAlbumConfig.getCommonConfigInstance(false).closeDamageDropDistance.get().floatValue();
-    private static final double STABLE_DAMAGE_END_DISTANCE =  NextAlbumConfig.getCommonConfigInstance(false).stableDamageEndDistance.get().floatValue();
-    private static final float CLOSE_DAMAGE = 10.0F * NextAlbumConfig.getCommonConfigInstance(false).bulletDamageMultiplier.get().floatValue();
-    private static final float STABLE_DAMAGE = 5.0F * NextAlbumConfig.getCommonConfigInstance(false).bulletDamageMultiplier.get().floatValue();
-    private static final double MIN_DISTANCE_DAMAGE =  NextAlbumConfig.getCommonConfigInstance(false).minDistanceDamage.get().floatValue();
-    private static final double FAR_DAMAGE_DROP_RATE = 0.28D;
+    private static final double DEFAULT_CLOSE_RANGE = RevolverStats.DEFAULT_CLOSE_RANGE;
+    private static final double DEFAULT_STABLE_RANGE = RevolverStats.DEFAULT_STABLE_RANGE;
+    private static final float DEFAULT_CLOSE_DAMAGE = 10.0F;
+    private static final float DEFAULT_STABLE_DAMAGE = 5.0F;
+    private static final float DEFAULT_MIN_DAMAGE = 1.0F;
+    private static final double DEFAULT_FAR_DROP_RATE = 0.28D;
 
     private static final int ENCIRCLEMENT_DURATION_TICKS = 40;
     private static final int ENCIRCLEMENT_DAMAGE_INTERVAL = 8;
     private static final double ENCIRCLEMENT_RADIUS = 3.2D;
-    private static final float ENCIRCLEMENT_DAMAGE = 0.75F * NextAlbumConfig.getCommonConfigInstance(false).bulletDamageMultiplier.get().floatValue();
-    private static final float ENCIRCLEMENT_FINISH_DAMAGE = 3.0F * NextAlbumConfig.getCommonConfigInstance(false).bulletDamageMultiplier.get().floatValue();
+    private static final float DEFAULT_ENCIRCLEMENT_DAMAGE = 0.75F;
+    private static final float DEFAULT_ENCIRCLEMENT_FINISH_DAMAGE = 3.0F;
     private static final double ENCIRCLEMENT_KICK_SPEED = 4.2D;
     private static final double ENCIRCLEMENT_STAND_HIT_DISTANCE_SQR = 0.85D * 0.85D;
     private static final double ENCIRCLEMENT_DAMAGE_TRACE_RADIUS = 0.85D;
@@ -136,7 +143,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
 
     private static final int PIERCING_SHOT_MAX_LIFETIME_TICKS = 80;
     private static final int PIERCING_SHOT_MAX_BLOCKS = 4;
-    private static final float PIERCING_SHOT_DAMAGE = 8.0F * NextAlbumConfig.getCommonConfigInstance(false).bulletDamageMultiplier.get().floatValue();
+    private static final float DEFAULT_PIERCING_DAMAGE = 8.0F;
     private static final float PIERCING_SHOT_CRITICAL_DAMAGE_MULTIPLIER = 1.45F;
     private static final float PIERCING_SHOT_KNOCKBACK = 1.5F;
     private static final float PIERCING_SHOT_COLLAPSE_THRESHOLD = 0.8F;
@@ -149,7 +156,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     private static final int SPLITTING_FRAGMENT_MAX_COUNT = 5;
     private static final int SPLITTING_FRAGMENT_RESOLVE_MIN_COUNT = 4;
     private static final int SPLITTING_FRAGMENT_RESOLVE_MAX_COUNT = 6;
-    private static final float SPLITTING_FRAGMENT_DAMAGE = 3.0F * NextAlbumConfig.getCommonConfigInstance(false).bulletDamageMultiplier.get().floatValue();
+    private static final float DEFAULT_SPLITTING_FRAGMENT_DAMAGE = 3.0F;
     private static final int SPLITTING_SHOT_BLEEDING_DURATION_TICKS = 100;
     private static final float SPLITTING_SHOT_BLEEDING_CHANCE = 0.35F;
     private static final float SPLITTING_SHOT_RESOLVE_BLEEDING_CHANCE = 0.70F;
@@ -163,6 +170,16 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     private static final int TIME_STOP_SLOWDOWN_TICKS = 3;
 
     private final ArrayDeque<TrailPoint> trailPoints = new ArrayDeque<>();
+    private float profileCloseDamage = DEFAULT_CLOSE_DAMAGE;
+    private float profileStableDamage = DEFAULT_STABLE_DAMAGE;
+    private float profileMinDamage = DEFAULT_MIN_DAMAGE;
+    private double profileCloseRange = DEFAULT_CLOSE_RANGE;
+    private double profileStableRange = DEFAULT_STABLE_RANGE;
+    private double profileFarDropRate = DEFAULT_FAR_DROP_RATE;
+    private float profilePiercingDamage = DEFAULT_PIERCING_DAMAGE;
+    private float profileEncirclementDamage = DEFAULT_ENCIRCLEMENT_DAMAGE;
+    private float profileEncirclementFinishDamage = DEFAULT_ENCIRCLEMENT_FINISH_DAMAGE;
+    private float profileSplittingFragmentDamage = DEFAULT_SPLITTING_FRAGMENT_DAMAGE;
     private int ricochetCount;
     private int sexPistolsRedirectedTicks;
     private int loadedSexPistolsMask;
@@ -174,6 +191,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     private UUID lastSexPistolsTransferStandId;
     private UUID lastSexPistolsKickStandId;
     private boolean lastSexPistolsKickCritical;
+    private boolean damageCritical;
     private double bulletTravelDistance;
     private boolean encirclementBullet;
     private boolean encirclementActive;
@@ -216,6 +234,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     private int timeStopFlightTicks;
     private int timeStopSlowdownTicks;
     private Vector3d timeStopHitMotion;
+    private final Set<BlockPos> passThroughRedstoneHits = new HashSet<>();
 
     private static class EncirclementGroup {
         private final UUID ownerId;
@@ -246,12 +265,57 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     public RevolverBulletEntity(EntityType<? extends RevolverBulletEntity> entityType, World world) {
         super(entityType, world);
         this.pickup = PickupStatus.DISALLOWED;
+        applyDefaultProfile();
     }
 
     public RevolverBulletEntity(World world, LivingEntity shooter) {
         super(InitEntities.REVOLVER_BULLET.get(), shooter, world);
         this.pickup = PickupStatus.DISALLOWED;
         setSexPistolsStandSkinFromOwner(shooter);
+        applyDefaultProfile();
+    }
+
+    private void applyDefaultProfile() {
+        NextAlbumConfig.Common cfg = NextAlbumConfig.getCommonConfigInstance(false);
+        float damageMul = cfg.getBulletDamageMultiplier();
+        this.profileCloseDamage = DEFAULT_CLOSE_DAMAGE * damageMul;
+        this.profileStableDamage = DEFAULT_STABLE_DAMAGE * damageMul;
+        this.profileMinDamage = Math.max(DEFAULT_MIN_DAMAGE * damageMul, (float) cfg.getMinDistanceDamage());
+        this.profileCloseRange = cfg.getCloseDamageDropDistance();
+        this.profileStableRange = cfg.getStableDamageEndDistance();
+        this.profileFarDropRate = DEFAULT_FAR_DROP_RATE;
+        this.profilePiercingDamage = DEFAULT_PIERCING_DAMAGE * damageMul;
+        this.profileEncirclementDamage = DEFAULT_ENCIRCLEMENT_DAMAGE * damageMul;
+        this.profileEncirclementFinishDamage = DEFAULT_ENCIRCLEMENT_FINISH_DAMAGE * damageMul;
+        this.profileSplittingFragmentDamage = DEFAULT_SPLITTING_FRAGMENT_DAMAGE * damageMul;
+    }
+
+    public void applyGunStats(RevolverStats stats) {
+        NextAlbumConfig.Common cfg = NextAlbumConfig.getCommonConfigInstance(false);
+        float damageMul = cfg.getBulletDamageMultiplier();
+        this.profileCloseDamage = stats.closeDamage * damageMul;
+        this.profileStableDamage = stats.baseDamage * damageMul;
+        this.profileMinDamage = Math.max(stats.minDistanceDamage * damageMul, (float) cfg.getMinDistanceDamage());
+        this.profileCloseRange = stats.closeRange * (cfg.getCloseDamageDropDistance() / DEFAULT_CLOSE_RANGE);
+        this.profileStableRange = stats.stableRange * (cfg.getStableDamageEndDistance() / DEFAULT_STABLE_RANGE);
+        this.profileFarDropRate = stats.farDropRate;
+        this.profilePiercingDamage = stats.piercingDamage * damageMul;
+        this.profileEncirclementDamage = stats.encirclementDamage * damageMul;
+        this.profileEncirclementFinishDamage = stats.encirclementFinishDamage * damageMul;
+        this.profileSplittingFragmentDamage = stats.splittingFragmentDamage * damageMul;
+    }
+
+    public void copyDamageProfileFrom(RevolverBulletEntity other) {
+        this.profileCloseDamage = other.profileCloseDamage;
+        this.profileStableDamage = other.profileStableDamage;
+        this.profileMinDamage = other.profileMinDamage;
+        this.profileCloseRange = other.profileCloseRange;
+        this.profileStableRange = other.profileStableRange;
+        this.profileFarDropRate = other.profileFarDropRate;
+        this.profilePiercingDamage = other.profilePiercingDamage;
+        this.profileEncirclementDamage = other.profileEncirclementDamage;
+        this.profileEncirclementFinishDamage = other.profileEncirclementFinishDamage;
+        this.profileSplittingFragmentDamage = other.profileSplittingFragmentDamage;
     }
 
     @Override
@@ -367,6 +431,9 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         Vector3d travelStart = position();
         super.tick();
         updateBulletTravelDistance(travelStart);
+        if (!level.isClientSide) {
+            tickPassThroughRedstone(travelStart, position());
+        }
         if (!level.isClientSide && encirclementActive) {
             tickEncirclement(travelStart);
             return;
@@ -396,6 +463,17 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         if (tickCount > MAX_LIFETIME_TICKS) {
             remove();
         }
+    }
+
+    private void tickPassThroughRedstone(Vector3d start, Vector3d end) {
+        if (removed || inGround || !(level instanceof ServerWorld)) {
+            return;
+        }
+        ServerPlayerEntity player = RevolverBulletRedstoneUtil.resolvePlayer(getOwner());
+        if (player == null) {
+            return;
+        }
+        RevolverBulletRedstoneUtil.activateAlongPath((ServerWorld) level, start, end, player, passThroughRedstoneHits);
     }
 
     @Override
@@ -463,6 +541,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
                 remove();
                 return;
             }
+            tryApplyBulletStatusEffects(target);
             if (redirectedHit) {
                 SexPistolsSoundUtil.playRedirectHit(this);
             }
@@ -492,7 +571,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
             return true;
         }
         if (hitEntity instanceof LivingEntity) {
-            damageEncirclementTarget((LivingEntity) hitEntity, ENCIRCLEMENT_DAMAGE);
+            damageEncirclementTarget((LivingEntity) hitEntity, this.profileEncirclementDamage);
         }
         return true;
     }
@@ -516,6 +595,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         if (hitResult.getType() != RayTraceResult.Type.MISS) {
             end = hitResult.getLocation();
         }
+        tickPassThroughRedstone(start, end);
         hitPiercingShotTargets(start, end, motion);
         if (hitResult.getType() == RayTraceResult.Type.BLOCK && handlePiercingShotBlockHit((BlockRayTraceResult) hitResult, motion)) {
             return;
@@ -628,9 +708,10 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
             standTarget.breakStandBlocking(StandStatFormulas.getBlockingBreakTicks(standTarget.getDurability()));
         }
         DamageSource source = getDamageSourceForTarget(target);
-        float damage = piercingShotCritical ? PIERCING_SHOT_DAMAGE * PIERCING_SHOT_CRITICAL_DAMAGE_MULTIPLIER : PIERCING_SHOT_DAMAGE;
-        DamageUtil.hurtThroughInvulTicks(target, source, damage);
+        float piercingDamage = piercingShotCritical ? this.profilePiercingDamage * PIERCING_SHOT_CRITICAL_DAMAGE_MULTIPLIER : this.profilePiercingDamage;
+        DamageUtil.hurtThroughInvulTicks(target, source, piercingDamage);
         applyPiercingShotKnockback(owner, target, motion);
+        tryApplyBulletStatusEffects(target);
         if (piercingShotCritical && SexPistolsResolveUtil.hasResolve(owner)) {
             target.addEffect(new EffectInstance(InitEffects.COLLAPSE.get(), PIERCING_SHOT_COLLAPSE_TICKS, 0, false, true, true));
         }
@@ -645,7 +726,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         }
         Vector3d knockbackDir = motion.normalize();
         DamageUtil.knockback(target, PIERCING_SHOT_KNOCKBACK, (float) -Math.atan2(knockbackDir.x, knockbackDir.z) * (180F / (float) Math.PI));
-        com.github.standobyte.jojo.util.mc.damage.KnockbackCollisionImpact.getHandler(target).ifPresent(cap -> cap.onPunchSetKnockbackImpact(knockbackDir.scale(PIERCING_SHOT_KNOCKBACK), owner).withImpactExplosion(0.5F, null, PIERCING_SHOT_DAMAGE * 0.3F));
+        com.github.standobyte.jojo.util.mc.damage.KnockbackCollisionImpact.getHandler(target).ifPresent(cap -> cap.onPunchSetKnockbackImpact(knockbackDir.scale(PIERCING_SHOT_KNOCKBACK), owner).withImpactExplosion(0.5F, null, this.profilePiercingDamage * 0.3F));
     }
 
     private boolean handlePiercingShotBlockHit(BlockRayTraceResult result, Vector3d motion) {
@@ -722,6 +803,23 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         float chance = resolve ? SPLITTING_SHOT_RESOLVE_BLEEDING_CHANCE : SPLITTING_SHOT_BLEEDING_CHANCE;
         if ((owner != null ? owner.getRandom() : RANDOM).nextFloat() < chance) {
             target.addEffect(new EffectInstance(ModStatusEffects.BLEEDING.get(), SPLITTING_SHOT_BLEEDING_DURATION_TICKS, resolve ? 1 : 0, false, true, true));
+        }
+    }
+
+    private void tryApplyBulletStatusEffects(LivingEntity target) {
+        if (level.isClientSide || target == null || !target.isAlive() || target instanceof SexPistolsEntity) {
+            return;
+        }
+        Entity owner = getOwner();
+        if (target == owner) {
+            return;
+        }
+        Random random = owner instanceof LivingEntity ? ((LivingEntity) owner).getRandom() : RANDOM;
+        if (random.nextFloat() < HIT_BLEED_CHANCE) {
+            target.addEffect(new EffectInstance(ModStatusEffects.BLEEDING.get(), HIT_BLEED_TICKS, 0, false, true, true));
+        }
+        if (random.nextFloat() < HIT_SLOW_CHANCE) {
+            target.addEffect(new EffectInstance(Effects.MOVEMENT_SLOWDOWN, HIT_SLOW_TICKS, 0, false, true, true));
         }
     }
     private void splitIntoFragments(LivingEntity owner, LivingEntity primaryTarget, Vector3d origin, Vector3d incomingMotion, SexPistolsTargetMode targetMode) {
@@ -829,7 +927,8 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         fragment.xOld = spawnPos.x;
         fragment.yOld = spawnPos.y;
         fragment.zOld = spawnPos.z;
-        fragment.setBaseDamage(SPLITTING_FRAGMENT_DAMAGE);
+        fragment.copyDamageProfileFrom(this);
+        fragment.setBaseDamage(this.profileSplittingFragmentDamage);
         fragment.setSplittingFragment(target, spawnPos, targetPoint, curve, exitDirection, pathTicks, killTrackerId);
         fragment.setSexPistolsStandSkin(getSexPistolsStandSkin());
         fragment.sexPistolsResolveRicochetCount = sexPistolsResolveRicochetCount + 1;
@@ -1147,7 +1246,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
                 playEncirclementKick(stand, targetCenter.subtract(from), from);
             }
             if (!dealtFinishDamage) {
-                damageEncirclementTarget(target, ENCIRCLEMENT_FINISH_DAMAGE);
+                damageEncirclementTarget(target, this.profileEncirclementFinishDamage);
                 dealtFinishDamage = true;
             }
             if (!playedFinishHitSound) {
@@ -1309,7 +1408,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         encirclementKickCooldown = target != null ? 2 : ENCIRCLEMENT_DAMAGE_INTERVAL;
         playEncirclementKick(stand, motion, from);
         if (encirclementTicks % ENCIRCLEMENT_DAMAGE_INTERVAL == 0) {
-            traceEncirclementDamage(from, to, ENCIRCLEMENT_DAMAGE);
+            traceEncirclementDamage(from, to, this.profileEncirclementDamage);
         }
     }
 
@@ -1356,7 +1455,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
 
     private void traceEncirclementDamage(Vector3d from, Vector3d to) {
         if (encirclementTicks % ENCIRCLEMENT_DAMAGE_INTERVAL == 0) {
-            traceEncirclementDamage(from, to, ENCIRCLEMENT_DAMAGE);
+            traceEncirclementDamage(from, to, this.profileEncirclementDamage);
         }
     }
 
@@ -1444,6 +1543,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         }
         DamageSource source = getDamageSourceForTarget(target);
         target.hurt(source, damage);
+        tryApplyBulletStatusEffects(target);
         suspendEncirclementTarget(target);
         if (level instanceof ServerWorld) {
             ((ServerWorld) level).sendParticles(ParticleTypes.DAMAGE_INDICATOR, target.getX(), target.getY() + target.getBbHeight() * 0.5D, target.getZ(), 2, 0.12D, 0.12D, 0.12D, 0.0D);
@@ -1585,7 +1685,14 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
     public boolean rollSexPistolsCriticalKick(LivingEntity owner) {
         boolean critical = owner != null && owner.getRandom().nextFloat() < SexPistolsJoyfulUtil.getSexPistolsCriticalChance(owner);
         lastSexPistolsKickCritical = critical;
+        if (critical) {
+            damageCritical = true;
+        }
         return critical;
+    }
+
+    public int getSexPistolsRedirectBudget() {
+        return Integer.bitCount(loadedSexPistolsMask);
     }
 
     public void setLoadedSexPistolsMask(int loadedSexPistolsMask) {
@@ -1694,19 +1801,42 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
 
     private float getDistanceScaledDamage() {
         double damage;
-        if (bulletTravelDistance <= CLOSE_DAMAGE_DROP_DISTANCE) {
-            double progress = MathHelper.clamp(bulletTravelDistance / CLOSE_DAMAGE_DROP_DISTANCE, 0.0D, 1.0D);
+        if (bulletTravelDistance <= this.profileCloseRange) {
+            double progress = this.profileCloseRange <= 0.0D ? 1.0D : MathHelper.clamp(bulletTravelDistance / this.profileCloseRange, 0.0D, 1.0D);
             double eased = 1.0D - Math.pow(1.0D - progress, 3.0D);
-            damage = CLOSE_DAMAGE - (CLOSE_DAMAGE - STABLE_DAMAGE) * eased;
+            damage = this.profileCloseDamage - (this.profileCloseDamage - this.profileStableDamage) * eased;
         }
-        else if (bulletTravelDistance <= STABLE_DAMAGE_END_DISTANCE) {
-            damage = STABLE_DAMAGE;
+        else if (bulletTravelDistance <= this.profileStableRange) {
+            damage = this.profileStableDamage;
         }
         else {
-            double farDistance = bulletTravelDistance - STABLE_DAMAGE_END_DISTANCE;
-            damage = MIN_DISTANCE_DAMAGE + (STABLE_DAMAGE - MIN_DISTANCE_DAMAGE) * Math.exp(-farDistance * FAR_DAMAGE_DROP_RATE);
+            double farDistance = bulletTravelDistance - this.profileStableRange;
+            damage = this.profileMinDamage + (this.profileStableDamage - this.profileMinDamage) * Math.exp(-farDistance * this.profileFarDropRate);
         }
-        return (float) MathHelper.clamp(damage, MIN_DISTANCE_DAMAGE, CLOSE_DAMAGE);
+        return applyCriticalDamage((float) MathHelper.clamp(damage, this.profileMinDamage, this.profileCloseDamage));
+    }
+
+    private static int getMaxRicochets() {
+        return NextAlbumConfig.getCommonConfigInstance(false).maxRicochetCount.get();
+    }
+
+    private static long getBlockDamageMemoryTicks() {
+        return NextAlbumConfig.getCommonConfigInstance(false).blockDamageMemoryTicks.get();
+    }
+
+    public void setDamageCritical(boolean critical) {
+        this.damageCritical = critical;
+        if (critical) {
+            lastSexPistolsKickCritical = true;
+        }
+    }
+
+    public boolean isDamageCritical() {
+        return damageCritical || lastSexPistolsKickCritical;
+    }
+
+    private float applyCriticalDamage(float damage) {
+        return isDamageCritical() ? damage * 1.5F : damage;
     }
 
     private boolean isEffectiveActualDamage(LivingEntity target, float actualDamage, float baseDamage) {
@@ -1740,12 +1870,9 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         if (sexPistolsLockedTargetId == null || !(level instanceof ServerWorld)) {
             return null;
         }
-        if (sexPistolsLockedTargetMode != null && sexPistolsLockedTargetMode != targetMode) {
-            clearSexPistolsLockedTarget();
-            return null;
-        }
         Entity entity = ((ServerWorld) level).getEntity(sexPistolsLockedTargetId);
-        if (entity instanceof LivingEntity && SexPistolsBulletRedirectUtil.isValidTarget(owner, (LivingEntity) entity, targetMode)) {
+        if (entity instanceof LivingEntity && ((LivingEntity) entity).isAlive()
+                && !(entity instanceof SexPistolsEntity && ((SexPistolsEntity) entity).getUser() == owner)) {
             return (LivingEntity) entity;
         }
         clearSexPistolsLockedTarget();
@@ -1762,6 +1889,22 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
 
     public void updateLastSexPistolsKickStand(SexPistolsEntity stand) {
         lastSexPistolsKickStandId = stand != null && stand.isAlive() ? stand.getUUID() : null;
+    }
+
+    public void captureSexPistolsFireTarget(LivingEntity owner) {
+        if (owner == null) {
+            return;
+        }
+        IStandPower power = IStandPower.getStandPowerOptional(owner).orElse(null);
+        SexPistolsEntities sexPistols = power != null ? SexPistolsStandType.getSexPistolsEntities(power).orElse(null) : null;
+        if (sexPistols == null) {
+            return;
+        }
+        SexPistolsTargetMode mode = sexPistols.getTargetMode();
+        if (mode == SexPistolsTargetMode.AIM) {
+            LivingEntity aim = SexPistolsAimUtil.findAimTarget(owner, power);
+            updateSexPistolsLockedTarget(aim, mode);
+        }
     }
 
     public void updateSexPistolsLockedTarget(Entity target, SexPistolsTargetMode targetMode) {
@@ -1824,7 +1967,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
             autoRedirectCooldown = 1;
             return;
         }
-        SexPistolsBulletRedirectUtil.RedirectResult plannedRedirect = SexPistolsBulletRedirectUtil.getRedirect(level, owner, kickStand, kickPoint, incomingMotion, targetMode, getSexPistolsLockedTarget(owner, targetMode), transferOrder, lastSexPistolsTransferStandId);
+        SexPistolsBulletRedirectUtil.RedirectResult plannedRedirect = SexPistolsBulletRedirectUtil.getRedirect(level, owner, kickStand, kickPoint, incomingMotion, targetMode, getSexPistolsLockedTarget(owner, targetMode), transferOrder, lastSexPistolsTransferStandId, getSexPistolsRedirectBudget());
         updateSexPistolsLockedTarget(plannedRedirect.target, targetMode);
         if (plannedRedirect.scouting) {
             positionSexPistolsKickStand(kickStand, kickPoint, incomingMotion);
@@ -1876,7 +2019,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
 
     private void performLoadedSexPistolsKick(LivingEntity owner, SexPistolsEntity kickStand, int pistolIndex, Vector3d kickPoint, Vector3d incomingMotion, SexPistolsTargetMode targetMode, SexPistolsTransferOrder transferOrder) {
         positionSexPistolsKickStand(kickStand, kickPoint, incomingMotion);
-        SexPistolsBulletRedirectUtil.RedirectResult redirect = applySexPistolsCriticalKick(owner, SexPistolsBulletRedirectUtil.getRedirect(level, owner, kickStand, kickPoint, incomingMotion, targetMode, getSexPistolsLockedTarget(owner, targetMode), transferOrder, lastSexPistolsTransferStandId));
+        SexPistolsBulletRedirectUtil.RedirectResult redirect = applySexPistolsCriticalKick(owner, SexPistolsBulletRedirectUtil.getRedirect(level, owner, kickStand, kickPoint, incomingMotion, targetMode, getSexPistolsLockedTarget(owner, targetMode), transferOrder, lastSexPistolsTransferStandId, getSexPistolsRedirectBudget()));
         updateSexPistolsLockedTarget(redirect.target, targetMode);
         if (trySplitSplittingShot(owner, kickStand, pistolIndex, kickPoint, incomingMotion, targetMode, redirect)) {
             return;
@@ -2057,12 +2200,16 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         kickStand.playKickAnimation(motion);
         updateLastSexPistolsKickStand(kickStand);
         kickStand.returnToUserAfterKick();
-        sendLoadedSexPistolsKickPackets(kickStand, motion, kickPoint);
+        sendLoadedSexPistolsKickPackets(kickStand, motion, kickPoint, !kickStand.isRemoteStay());
         SexPistolsSoundUtil.playRedirectKick(kickStand);
     }
 
     private void sendLoadedSexPistolsKickPackets(SexPistolsEntity kickStand, Vector3d motion, Vector3d kickPoint) {
-        SexPistolsKickAnimationPacket animationPacket = new SexPistolsKickAnimationPacket(kickStand.getId(), motion.x, motion.z, true, kickPoint);
+        sendLoadedSexPistolsKickPackets(kickStand, motion, kickPoint, true);
+    }
+
+    private void sendLoadedSexPistolsKickPackets(SexPistolsEntity kickStand, Vector3d motion, Vector3d kickPoint, boolean returnToUser) {
+        SexPistolsKickAnimationPacket animationPacket = new SexPistolsKickAnimationPacket(kickStand.getId(), motion.x, motion.z, returnToUser, kickPoint);
         SexPistolsKickMuzzleFlashPacket flashPacket = new SexPistolsKickMuzzleFlashPacket(kickStand.getId(), false, kickStand.getRandom().nextFloat(), lastSexPistolsKickCritical);
         lastSexPistolsKickCritical = false;
         PacketDistributor.TargetPoint targetPoint = new PacketDistributor.TargetPoint(kickPoint.x, kickPoint.y, kickPoint.z, 96.0D, level.dimension());
@@ -2118,7 +2265,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
                 .orElse(null);
     }
     private boolean tryRicochetOffEntity(EntityRayTraceResult result, LivingEntity target) {
-        if (ricochetCount >= MAX_RICOCHETS) {
+        if (ricochetCount >= getMaxRicochets()) {
             return false;
         }
         Vector3d motion = getDeltaMovement();
@@ -2216,7 +2363,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         }
         SexPistolsTargetMode targetMode = getSexPistolsTargetMode(owner);
         SexPistolsTransferOrder transferOrder = getSexPistolsTransferOrder(owner);
-        SexPistolsBulletRedirectUtil.RedirectResult redirect = applySexPistolsCriticalKick(owner, SexPistolsBulletRedirectUtil.getRedirect(level, owner, stand, hitPos, motion, targetMode, getSexPistolsLockedTarget(owner, targetMode), transferOrder, lastSexPistolsTransferStandId));
+        SexPistolsBulletRedirectUtil.RedirectResult redirect = applySexPistolsCriticalKick(owner, SexPistolsBulletRedirectUtil.getRedirect(level, owner, stand, hitPos, motion, targetMode, getSexPistolsLockedTarget(owner, targetMode), transferOrder, lastSexPistolsTransferStandId, getSexPistolsRedirectBudget() + 1));
         updateLastSexPistolsKickStand(stand);
         updateSexPistolsLockedTarget(redirect.target, targetMode);
         updateLastSexPistolsTransferStand(redirect);
@@ -2232,6 +2379,8 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         this.zOld = redirect.position.z;
         resetTrail();
         markSexPistolsRedirected();
+        stand.playKickAnimation(redirect.motion);
+        sendLoadedSexPistolsKickPackets(stand, redirect.motion, hitPos, false);
         SexPistolsSoundUtil.playRedirectKick(stand);
         return true;
     }
@@ -2263,6 +2412,17 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         ServerWorld serverWorld = (ServerWorld) level;
         BlockPos pos = result.getBlockPos();
         BlockState state = level.getBlockState(pos);
+        ServerPlayerEntity player = RevolverBulletRedstoneUtil.resolvePlayer(getOwner());
+        if (player != null
+                && RevolverBulletRedstoneUtil.tryActivate(serverWorld, pos, state, player, result.getDirection(),
+                getDeltaMovement().lengthSqr() > 1.0E-6D ? result.getLocation().add(getDeltaMovement().normalize()) : result.getLocation())) {
+            if (RevolverBulletRedstoneUtil.isPassThroughDevice(state)) {
+                passThroughRedstoneHits.add(pos.immutable());
+                return;
+            }
+            remove();
+            return;
+        }
         float hardness = state.getDestroySpeed(level, pos);
         Vector3d motion = getDeltaMovement();
         Direction face = result.getDirection();
@@ -2302,7 +2462,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
 
         clearBlockDamage(serverWorld, pos);
         if (impactTier == ImpactTier.FORCED_RICOCHET) {
-            if (tryRicochet(motion, face, hitVec, 0.88D, 1.35F)) {
+            if (tryRicochet(motion, face, hitVec, 0.88D, 1.35F) || tryStandRescueBounce(motion, face, hitVec)) {
                 return;
             }
             remove();
@@ -2310,10 +2470,14 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         }
 
         if (shouldRicochetOnHardSurface(state, motion, face)) {
-            if (tryRicochet(motion, face, hitVec, 0.72D, 1.55F)) {
+            if (tryRicochet(motion, face, hitVec, 0.72D, 1.55F) || tryStandRescueBounce(motion, face, hitVec)) {
                 return;
             }
             remove();
+            return;
+        }
+
+        if (tryStandRescueBounce(motion, face, hitVec)) {
             return;
         }
 
@@ -2474,7 +2638,7 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
             BlockPos pos = BlockPos.of(key.blockPosLong);
             BlockDamageRecord record = entry.getValue();
             BlockState currentState = world.getBlockState(pos);
-            boolean expired = gameTime - record.lastHitGameTime > BLOCK_DAMAGE_MEMORY_TICKS;
+            boolean expired = gameTime - record.lastHitGameTime > getBlockDamageMemoryTicks();
             boolean changed = currentState.isAir() || Block.getId(currentState) != record.blockStateId;
             if (expired || changed) {
                 world.destroyBlockProgress(record.breakerId, pos, -1);
@@ -2495,8 +2659,34 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         return dot < threshold;
     }
 
+    private boolean tryStandRescueBounce(Vector3d motion, Direction face, Vector3d hitVec) {
+        if (loadedSexPistolsMask == 0 || !(getOwner() instanceof LivingEntity) || !(level instanceof ServerWorld)) {
+            return false;
+        }
+        LivingEntity owner = (LivingEntity) getOwner();
+        int pistolIndex = getNextLoadedPistolIndex();
+        if (pistolIndex < 0) {
+            return false;
+        }
+        SexPistolsEntity kickStand = getLoadedKickStand(owner, pistolIndex, hitVec);
+        if (kickStand == null) {
+            return false;
+        }
+        SexPistolsTargetMode targetMode = getSexPistolsTargetMode(owner);
+        SexPistolsTransferOrder transferOrder = getSexPistolsTransferOrder(owner);
+        SexPistolsBulletRedirectUtil.RedirectResult redirect = applySexPistolsCriticalKick(owner,
+                SexPistolsBulletRedirectUtil.getRedirect(level, owner, kickStand, hitVec, motion, targetMode,
+                        getSexPistolsLockedTarget(owner, targetMode), transferOrder, lastSexPistolsTransferStandId, getSexPistolsRedirectBudget() + 1));
+        playLoadedSexPistolsKick(kickStand, redirect.motion, hitVec);
+        applyLoadedSexPistolsKickMotion(redirect);
+        loadedSexPistolsMask &= ~(1 << pistolIndex);
+        autoRedirectCooldown = AUTO_REDIRECT_INTERVAL;
+        scoutSexPistolsTargets(kickStand, hitVec, redirect.motion, targetMode);
+        return true;
+    }
+
     private boolean tryRicochet(Vector3d motion, Direction face, Vector3d hitVec, double speedScale, float pitchBase) {
-        if (ricochetCount >= MAX_RICOCHETS) {
+        if (ricochetCount >= getMaxRicochets()) {
             return false;
         }
         Vector3d reflected = reflect(motion, face);
@@ -2549,6 +2739,16 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
         nbt.putInt("SexPistolsResolveRicochetCount", sexPistolsResolveRicochetCount);
         getSexPistolsStandSkin().ifPresent(skin -> nbt.putString("SexPistolsStandSkin", skin.toString()));
         nbt.putDouble("BulletTravelDistance", bulletTravelDistance);
+        nbt.putFloat("ProfileCloseDamage", profileCloseDamage);
+        nbt.putFloat("ProfileStableDamage", profileStableDamage);
+        nbt.putFloat("ProfileMinDamage", profileMinDamage);
+        nbt.putDouble("ProfileCloseRange", profileCloseRange);
+        nbt.putDouble("ProfileStableRange", profileStableRange);
+        nbt.putDouble("ProfileFarDropRate", profileFarDropRate);
+        nbt.putFloat("ProfilePiercingDamage", profilePiercingDamage);
+        nbt.putFloat("ProfileEncirclementDamage", profileEncirclementDamage);
+        nbt.putFloat("ProfileEncirclementFinishDamage", profileEncirclementFinishDamage);
+        nbt.putFloat("ProfileSplittingFragmentDamage", profileSplittingFragmentDamage);
         nbt.putBoolean("EncirclementBullet", isEncirclementBullet());
         nbt.putBoolean("PiercingShotBullet", isPiercingShotBullet());
         nbt.putBoolean("SplittingShotBullet", isSplittingShotBullet());
@@ -2618,6 +2818,18 @@ public class RevolverBulletEntity extends AbstractArrowEntity {
             setSexPistolsStandSkin(Optional.empty());
         }
         bulletTravelDistance = nbt.getDouble("BulletTravelDistance");
+        if (nbt.contains("ProfileCloseDamage")) {
+            profileCloseDamage = nbt.getFloat("ProfileCloseDamage");
+            profileStableDamage = nbt.getFloat("ProfileStableDamage");
+            profileMinDamage = nbt.getFloat("ProfileMinDamage");
+            profileCloseRange = nbt.getDouble("ProfileCloseRange");
+            profileStableRange = nbt.getDouble("ProfileStableRange");
+            profileFarDropRate = nbt.getDouble("ProfileFarDropRate");
+            profilePiercingDamage = nbt.getFloat("ProfilePiercingDamage");
+            profileEncirclementDamage = nbt.getFloat("ProfileEncirclementDamage");
+            profileEncirclementFinishDamage = nbt.getFloat("ProfileEncirclementFinishDamage");
+            profileSplittingFragmentDamage = nbt.getFloat("ProfileSplittingFragmentDamage");
+        }
         setEncirclementBullet(nbt.getBoolean("EncirclementBullet"));
         setPiercingShotBullet(nbt.getBoolean("PiercingShotBullet"));
         setSplittingShotBullet(nbt.getBoolean("SplittingShotBullet"));

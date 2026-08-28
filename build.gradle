@@ -18,6 +18,8 @@ apply plugin: 'org.spongepowered.mixin'
 mixin {
     add sourceSets.main, "rotp_nextalbum.refmap.json"
     config "rotp_nextalbum.mixins.json"
+    config "rotp_nextalbum.sodium.mixins.json"
+    config "rotp_nextalbum.dynlights.mixins.json"
     debug.verbose = true
 }
 
@@ -175,6 +177,7 @@ repositories {
     maven { url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
 
     maven { url = "https://www.cursemaven.com" }
+    maven { url = "https://libraries.minecraft.net" }
     flatDir { dirs 'libs' }
 }
 
@@ -208,8 +211,34 @@ dependencies {
 	// GeckoLib for animated entity models (updated to latest for 1.16.5 with alpha support)
 	implementation fg.deobf('software.bernie.geckolib:geckolib-forge-1.16.5:3.0.104')
 
-    implementation fg.deobf("curse.maven:curios-309927:4419403")
+    compileOnly fg.deobf("curse.maven:curios-309927:4419403")
 	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    implementation fg.deobf('local:lightspeed:1.0.5')
+
+    // ForgeGradle may drop these when MCPRepo/Mojang etag refresh fails (SSL reset).
+    // They are provided by Minecraft at runtime; compileOnly keeps javac working.
+    compileOnly 'com.google.code.gson:gson:2.8.0'
+    compileOnly 'com.google.guava:guava:21.0'
+    compileOnly 'com.mojang:brigadier:1.0.17'
+    compileOnly 'com.mojang:datafixerupper:4.0.26'
+    compileOnly 'org.lwjgl:lwjgl:3.2.2'
+    compileOnly 'org.lwjgl:lwjgl-opengl:3.2.2'
+    compileOnly 'org.lwjgl:lwjgl-glfw:3.2.2'
+    compileOnly 'io.netty:netty-all:4.1.25.Final'
+}
+
+sourceSets {
+    sodiumStub {
+        java.srcDir 'src/sodiumStub/java'
+        compileClasspath += sourceSets.main.compileClasspath
+        runtimeClasspath = files()
+    }
+}
+
+tasks.named('compileJava', JavaCompile) {
+    dependsOn 'compileSodiumStubJava'
+    classpath += files(sourceSets.sodiumStub.output.classesDirs)
 }
 
 // Example for how to get properties into the manifest for reading by the runtime..
@@ -224,7 +253,7 @@ jar {
             "Implementation-Version": "${version}",
             "Implementation-Vendor" :"RotP_BCBabelmoth",
             "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
-            "MixinConfigs": "rotp_nextalbum.mixins.json"
+            "MixinConfigs": "rotp_nextalbum.mixins.json,rotp_nextalbum.sodium.mixins.json,rotp_nextalbum.dynlights.mixins.json"
         ])
     }
 }

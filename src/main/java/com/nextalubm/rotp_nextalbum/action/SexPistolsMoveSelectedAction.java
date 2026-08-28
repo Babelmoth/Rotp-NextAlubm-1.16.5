@@ -109,13 +109,15 @@ public class SexPistolsMoveSelectedAction extends StandAction {
             stand.deliverCarriedItem();
             return;
         }
-        if (stand.isRemotePositionFixed() || stand.isManuallyControlled()) {
-            stand.returnToUserAfterKick();
+        boolean remote = stand.isRemotePositionFixed() || stand.isManuallyControlled();
+        LivingEntity looker = remote ? stand : user;
+        ItemEntity itemTarget = findLookedAtItem(world, looker, ITEM_TARGET_RANGE);
+        if (itemTarget != null) {
+            stand.startRetrievingItem(itemTarget, remote);
             return;
         }
-        ItemEntity itemTarget = findLookedAtItem(world, user, ITEM_TARGET_RANGE);
-        if (itemTarget != null) {
-            stand.startRetrievingItem(itemTarget);
+        if (remote) {
+            stand.returnToUserAfterKick();
             return;
         }
         Vector3d direction = user.getLookAngle();
@@ -149,9 +151,20 @@ public class SexPistolsMoveSelectedAction extends StandAction {
         if (stand != null) {
             ItemStack carried = stand.getCarriedItem();
             if (!carried.isEmpty()) {
+                if (stand.isRemoteStay() && !stand.isNearUserForItemGive()) {
+                    return new TranslationTextComponent(key + ".drop", pistolName, carried.getHoverName());
+                }
                 return new TranslationTextComponent(key + ".give", pistolName, carried.getHoverName());
             }
-            if (stand.isRemotePositionFixed() || stand.isManuallyControlled()) {
+            boolean remote = stand.isRemotePositionFixed() || stand.isManuallyControlled();
+            LivingEntity looker = remote ? stand : (power != null ? power.getUser() : null);
+            if (looker != null && looker.level != null && looker.level.isClientSide) {
+                ItemEntity itemTarget = findLookedAtItem(looker.level, looker, ITEM_TARGET_RANGE);
+                if (itemTarget != null) {
+                    return new TranslationTextComponent(key + ".pickup", pistolName, itemTarget.getItem().getHoverName());
+                }
+            }
+            if (remote) {
                 return new TranslationTextComponent(key + ".recall", pistolName);
             }
         }

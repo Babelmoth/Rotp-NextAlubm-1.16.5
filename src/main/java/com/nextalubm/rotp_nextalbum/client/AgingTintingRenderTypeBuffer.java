@@ -20,6 +20,6 @@ public class AgingTintingRenderTypeBuffer implements IRenderTypeBuffer {
 
     @Override
     public IVertexBuilder getBuffer(RenderType renderType) {
-        return new AgingTintingVertexBuilder(delegate.getBuffer(renderType), progress);
+        return AgingTintingVertexBuilder.wrapEntity(delegate.getBuffer(renderType), progress);
     }
 }

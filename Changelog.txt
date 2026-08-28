@@ -1,5 +1,37 @@
+
 v0.1.11
  ·Fixed The Grateful Dead's wrong mixin which cause bugged time stop. Now you can use time stop as normal.
  ·Fixed entity render problem.(I think)
 v0.1.12
  ·Now Sex Pistols can pick up item in longer range.
+
+v0.1.2
+    ·Fixed incompatibility with Lightspeed and Modern-Fix.
+    ·Fixed that can't store ammo in creative mode.
+    ·Super Aja necklace no longer hard-requires Curios; GeckoLib is declared as a real dependency.
+    ·Dedicated / hybrid servers (Forge runServer, CatServer 1.16.5, Mohist): fixed client-only class loading, DistExecutor crash, BoneMeal mixin clash with Cat’s extra overload, and FoodStats heal redirect.
+
+    ·Added Prosciutto Suits.
+    ·Added Manga-like step onomatopoeia particle which can only seen by Stand-user. You can disable it in config file.
+    ·Added in game client setting screen. You can see it on RotP setting screen.
+    ·Added aging rate: biome/temperature mods, exertion, food, and ice cubes now change how fast Grateful Dead aging applies. Cold biomes slow aging instead of stopping it.
+    ·Added Beach Boy (Pesci). Cast a hook, reel, plant trap hooks (including on dropped items), lash/slash, tear, and heart-crush. Optional path-line, crush damage, sound sense, and remote hook.
+    ·Added Prosciutto’s suit, with appearance cycling (default / no coat / stealth shadow). Full set extends Resolve delayed-death and scales Stand stats with Resolve.
+    ·Added ice cubes: holding one slows aging; an unmelted cube in the inventory protects living items from aging mist. Craftable.
+    ·Added cigarettes: light, inhale/exhale for Focus, or hold up to five lit cigarettes in your mouth.
+    ·Added Sex Pistols forced targets (up to 5) and an Aim lock mode.
+    ·Added The Grateful Dead grab / throw / place, aging punch (inject), age-yourself / remove self-aging, remove-all-aging, and a finisher punch.
+    ·Added manga-like step onomatopoeia particles (Stand users only; toggle in settings).
+    ·Added Resolve Last-Action: stay usable while downed; can be enabled for all Stands in settings.
+    ·Added an in-game NextAlbum settings page on the RotP settings screen.
+    ·Added aging-rate factors: biome / temperature mods, exertion, food, and ice cubes. Cold biomes slow aging instead of stopping it.
+    ·Added character voice lines and Stand summon/unsummon sounds for Beach Boy and The Grateful Dead.
+    ·Added new regular revolver item which can craft by anyone.
+    ·Added 6 avilabe advancements.
+
+    ·Now Sex Pistols remote pickup no longer instantly returns items. Far away, reuse drops the item; near the user, it is given to the player. Holding an ice cube grants nearby aging resistance as the cube melts.
+    ·Now Sex Pistols stay in place after a kick while remote-standby is on, instead of flying back.
+    ·Enhanced Sex Pistols redirect mechanism.
+    ·Now Revolver bullets and Beach Boy’s line can interact with doors, buttons, pressure plates, levers, and similar blocks.
+    ·Now Aged plants/trees will become weaker (hardness drops with aging).
+    ·Suit effect names and progress use each character’s theme color.

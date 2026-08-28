@@ -53,5 +53,35 @@ public class NetworkHandler {
                 AgingBlockUpdatePacket::encode, AgingBlockUpdatePacket::decode, AgingBlockUpdatePacket::handle);
         CHANNEL.registerMessage(ID.getAndIncrement(), AgingBlockClearPacket.class,
                 AgingBlockClearPacket::encode, AgingBlockClearPacket::decode, AgingBlockClearPacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), ProsciuttoSuitModePacket.class,
+                ProsciuttoSuitModePacket::encode, ProsciuttoSuitModePacket::decode, ProsciuttoSuitModePacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), GrabSyncPacket.class,
+                GrabSyncPacket::encode, GrabSyncPacket::decode, GrabSyncPacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), AgingRateDebugPacket.class,
+                AgingRateDebugPacket::encode, AgingRateDebugPacket::decode, AgingRateDebugPacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), ResolveDownedSyncPacket.class,
+                ResolveDownedSyncPacket::encode, ResolveDownedSyncPacket::decode, ResolveDownedSyncPacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), ResolveDownedGiveUpPacket.class,
+                ResolveDownedGiveUpPacket::encode, ResolveDownedGiveUpPacket::decode, ResolveDownedGiveUpPacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), GrabStrugglePacket.class,
+                GrabStrugglePacket::encode, GrabStrugglePacket::decode, GrabStrugglePacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), CigaretteMouthSyncPacket.class,
+                CigaretteMouthSyncPacket::encode, CigaretteMouthSyncPacket::decode, CigaretteMouthSyncPacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), CigaretteSmokePacket.class,
+                CigaretteSmokePacket::encode, CigaretteSmokePacket::decode, CigaretteSmokePacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), SexPistolsForcedTargetsPacket.class,
+                SexPistolsForcedTargetsPacket::encode, SexPistolsForcedTargetsPacket::decode, SexPistolsForcedTargetsPacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), BeachBoyLineLengthPacket.class,
+                BeachBoyLineLengthPacket::encode, BeachBoyLineLengthPacket::decode, BeachBoyLineLengthPacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), BeachBoyHitLinePacket.class,
+                BeachBoyHitLinePacket::encode, BeachBoyHitLinePacket::decode, BeachBoyHitLinePacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), BeachBoyHookControlPacket.class,
+                BeachBoyHookControlPacket::encode, BeachBoyHookControlPacket::decode, BeachBoyHookControlPacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), BeachBoySwimPosePacket.class,
+                BeachBoySwimPosePacket::encode, BeachBoySwimPosePacket::decode, BeachBoySwimPosePacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), ProsciuttoShadowSyncPacket.class,
+                ProsciuttoShadowSyncPacket::encode, ProsciuttoShadowSyncPacket::decode, ProsciuttoShadowSyncPacket::handle);
+        CHANNEL.registerMessage(ID.getAndIncrement(), BeachBoyReelTugPacket.class,
+                BeachBoyReelTugPacket::encode, BeachBoyReelTugPacket::decode, BeachBoyReelTugPacket::handle);
     }
 }

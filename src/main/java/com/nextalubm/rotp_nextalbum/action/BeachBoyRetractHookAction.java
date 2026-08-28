@@ -1,0 +1,70 @@
+package com.nextalubm.rotp_nextalbum.action;
+
+import javax.annotation.Nullable;
+
+import com.github.standobyte.jojo.action.ActionConditionResult;
+import com.github.standobyte.jojo.action.ActionTarget;
+import com.github.standobyte.jojo.action.stand.StandAction;
+import com.github.standobyte.jojo.power.impl.stand.IStandPower;
+import com.github.standobyte.jojo.util.general.LazySupplier;
+import com.nextalubm.rotp_nextalbum.NextAlubm;
+import com.nextalubm.rotp_nextalbum.entity.BeachBoyHookEntity;
+import com.nextalubm.rotp_nextalbum.util.BeachBoyStandUtil;
+
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.World;
+
+public class BeachBoyRetractHookAction extends StandAction {
+    private final boolean detachOnly;
+    private final LazySupplier<ResourceLocation> iconTexture;
+
+    public BeachBoyRetractHookAction(Builder builder, boolean detachOnly) {
+        this(builder, detachOnly, detachOnly ? "beach_boy_retract_hook" : "beach_boy_quick_reel");
+    }
+
+    public BeachBoyRetractHookAction(Builder builder, boolean detachOnly, String iconName) {
+        super(builder);
+        this.detachOnly = detachOnly;
+        this.iconTexture = new LazySupplier<>(
+                () -> new ResourceLocation(NextAlubm.MOD_ID, "textures/action/" + iconName + ".png"));
+    }
+
+    @Override
+    public ResourceLocation getIconTexturePath(@Nullable IStandPower power) {
+        return iconTexture.get();
+    }
+
+    @Override
+    public ActionConditionResult checkConditions(LivingEntity user, IStandPower power, ActionTarget target) {
+        ActionConditionResult result = super.checkConditions(user, power, target);
+        if (!result.isPositive()) {
+            return result;
+        }
+        BeachBoyHookEntity hook = BeachBoyStandUtil.findHook(user);
+        if (hook == null) {
+            return ActionConditionResult.NEGATIVE;
+        }
+        if (detachOnly && hook.getHookedEntity() == null) {
+            return conditionMessage("beach_boy_need_hooked");
+        }
+        return ActionConditionResult.POSITIVE;
+    }
+
+    @Override
+    protected void perform(World world, LivingEntity user, IStandPower power, ActionTarget target) {
+        if (world.isClientSide) {
+            return;
+        }
+        BeachBoyHookEntity hook = BeachBoyStandUtil.findHook(user);
+        if (hook == null) {
+            return;
+        }
+        if (detachOnly) {
+            hook.detachFromHost();
+        }
+        else {
+            hook.beginRetract();
+        }
+    }
+}

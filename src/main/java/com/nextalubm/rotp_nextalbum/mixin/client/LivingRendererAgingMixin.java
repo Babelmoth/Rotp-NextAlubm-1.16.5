@@ -9,13 +9,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
+import com.nextalubm.rotp_nextalbum.client.AgingEntityPallorRenderer;
 import com.nextalubm.rotp_nextalbum.client.AgingEntityRenderContext;
 import com.nextalubm.rotp_nextalbum.client.AgingTintingVertexBuilder;
 
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.entity.LivingRenderer;
 import net.minecraft.client.renderer.entity.model.EntityModel;
-import net.minecraft.client.renderer.entity.model.PlayerModel;
 import net.minecraft.entity.LivingEntity;
 
 @Mixin(LivingRenderer.class)
@@ -36,10 +36,21 @@ public abstract class LivingRendererAgingMixin<T extends LivingEntity, M extends
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/client/renderer/entity/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/matrix/MatrixStack;Lcom/mojang/blaze3d/vertex/IVertexBuilder;IIFFFF)V"))
     private IVertexBuilder rotpNextAlbum$wrapLivingModelVertexBuilder(IVertexBuilder original) {
-        if (model instanceof PlayerModel) {
-            return original;
+        return AgingTintingVertexBuilder.wrapEntity(original, AgingEntityRenderContext.getProgress());
+    }
+
+    @Inject(method = "render(Lnet/minecraft/entity/LivingEntity;FFLcom/mojang/blaze3d/matrix/MatrixStack;Lnet/minecraft/client/renderer/IRenderTypeBuffer;I)V",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/entity/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/matrix/MatrixStack;Lcom/mojang/blaze3d/vertex/IVertexBuilder;IIFFFF)V",
+                    shift = At.Shift.AFTER))
+    private void rotpNextAlbum$renderAgingPallor(T entity, float entityYaw, float partialTicks,
+                                                 MatrixStack matrixStack, IRenderTypeBuffer buffer,
+                                                 int packedLight, CallbackInfo ci) {
+        if (entity.isInvisible() || entity.isSpectator()) {
+            return;
         }
-        return AgingTintingVertexBuilder.wrap(original, AgingEntityRenderContext.getProgress());
+        AgingEntityPallorRenderer.renderModel(model, matrixStack, buffer, packedLight,
+                AgingEntityRenderContext.getProgress());
     }
 
     @Inject(method = "render(Lnet/minecraft/entity/LivingEntity;FFLcom/mojang/blaze3d/matrix/MatrixStack;Lnet/minecraft/client/renderer/IRenderTypeBuffer;I)V",

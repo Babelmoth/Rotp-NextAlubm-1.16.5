@@ -18,6 +18,7 @@ import com.nextalubm.rotp_nextalbum.stand.SexPistolsStandType;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsItemAttachmentUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsSoundUtil;
 import com.nextalubm.rotp_nextalbum.util.SexPistolsStaminaUtil;
+import com.nextalubm.rotp_nextalbum.util.StandSummonUtil;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
@@ -55,6 +56,7 @@ public class SexPistolsStandReloadAction extends StandAction {
         if (world.isClientSide || !(user instanceof ServerPlayerEntity)) {
             return;
         }
+        StandSummonUtil.ensureSummoned(user, power);
         ItemStack stack = user.getMainHandItem();
         SexPistolsEntities sexPistols = SexPistolsStandType.getSexPistolsEntities(power).orElse(null);
         RevolverItem revolver = (RevolverItem) stack.getItem();

@@ -11,11 +11,13 @@ import com.github.standobyte.jojo.entity.stand.StandEntity;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
 import com.github.standobyte.jojo.power.impl.stand.stats.StandStats;
 import com.github.standobyte.jojo.util.general.LazySupplier;
+import com.github.standobyte.jojo.util.general.ObjectWrapper;
 import com.nextalubm.rotp_nextalbum.NextAlubm;
+import com.nextalubm.rotp_nextalbum.util.AgingApplyMode;
 import com.nextalubm.rotp_nextalbum.util.AgingBlockTracker;
 import com.nextalubm.rotp_nextalbum.util.AgingEntityUtil;
 import com.nextalubm.rotp_nextalbum.util.AgingItemUtil;
-import com.nextalubm.rotp_nextalbum.util.AgingSpeedUtil;
+import com.nextalubm.rotp_nextalbum.util.TheGratefulDeadAgingLook;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
@@ -48,7 +50,7 @@ public class TheGratefulDeadAgingTouchAction extends StandAction {
 
     @Override
     public TargetRequirement getTargetRequirement() {
-        return TargetRequirement.NONE;
+        return TargetRequirement.ANY;
     }
 
     @Override
@@ -67,9 +69,6 @@ public class TheGratefulDeadAgingTouchAction extends StandAction {
         if (!result.isPositive()) {
             return result;
         }
-        if (AgingSpeedUtil.isColdBiome(user.level, getConditionCheckPos(user, target))) {
-            return conditionMessage("aging_touch_cold_biome");
-        }
         if (hasAgeableHeldItem(user)) {
             return ActionConditionResult.POSITIVE;
         }
@@ -81,16 +80,11 @@ public class TheGratefulDeadAgingTouchAction extends StandAction {
     @Override
     protected ActionConditionResult checkTarget(ActionTarget target, LivingEntity user, IStandPower power) {
         if (hasAgeableHeldItem(user)) {
-            return AgingSpeedUtil.isColdBiome(user.level, user.blockPosition())
-                    ? conditionMessage("aging_touch_cold_biome")
-                    : ActionConditionResult.POSITIVE;
+            return ActionConditionResult.POSITIVE;
         }
         switch (target.getType()) {
             case BLOCK: {
                 BlockPos pos = target.getBlockPos();
-                if (AgingSpeedUtil.isColdBiome(user.level, pos)) {
-                    return conditionMessage("aging_touch_cold_biome");
-                }
                 BlockState state = user.level.getBlockState(pos);
                 if (!HamonOrganismInfusion.isBlockLiving(state)) {
                     return conditionMessage("aging_touch_not_living");
@@ -99,9 +93,6 @@ public class TheGratefulDeadAgingTouchAction extends StandAction {
             }
             case ENTITY: {
                 Entity entity = target.getEntity();
-                if (AgingSpeedUtil.isColdBiome(user.level, entity.blockPosition())) {
-                    return conditionMessage("aging_touch_cold_biome");
-                }
                 if (entity instanceof ItemEntity) {
                     ItemStack stack = ((ItemEntity) entity).getItem();
                     if (!AgingItemUtil.isAgeableLivingItem(stack)) {
@@ -121,6 +112,26 @@ public class TheGratefulDeadAgingTouchAction extends StandAction {
             default:
                 return ActionConditionResult.NEGATIVE;
         }
+    }
+
+    @Override
+    public void overrideVanillaMouseTarget(ObjectWrapper<ActionTarget> targetContainer, World world,
+                                           LivingEntity user, IStandPower power) {
+        ActionTarget look = TheGratefulDeadAgingLook.resolve(user, power);
+        if (look.getType() == TargetType.EMPTY && hasAgeableHeldItem(user)) {
+            targetContainer.set(new ActionTarget(user));
+            return;
+        }
+        targetContainer.set(look);
+    }
+
+    @Override
+    public ActionTarget targetBeforePerform(World world, LivingEntity user, IStandPower power, ActionTarget target) {
+        ActionTarget look = TheGratefulDeadAgingLook.resolve(user, power);
+        if (look.getType() == TargetType.EMPTY && hasAgeableHeldItem(user)) {
+            return new ActionTarget(user);
+        }
+        return look;
     }
 
     @Override
@@ -154,11 +165,7 @@ public class TheGratefulDeadAgingTouchAction extends StandAction {
         if (!HamonOrganismInfusion.isBlockLiving(state)) {
             return;
         }
-        float speedMul = AgingSpeedUtil.getTotalAgingSpeedMultiplier(world, pos);
-        if (speedMul <= 0F) {
-            return;
-        }
-        float delta = speedMul / BASE_TICKS_PER_BLOCK;
+        float delta = 1.0F / BASE_TICKS_PER_BLOCK;
         AgingBlockTracker.addProgress((ServerWorld) world, pos, user.getUUID(), pos, delta);
     }
 
@@ -176,13 +183,8 @@ public class TheGratefulDeadAgingTouchAction extends StandAction {
         if (ageableTarget == null || !AgingEntityUtil.isAgeableLivingEntity(ageableTarget)) {
             return;
         }
-        BlockPos pos = ageableTarget.blockPosition();
-        float speedMul = AgingEntityUtil.getEntityAgingSpeedMultiplier((ServerWorld) world, pos);
-        if (speedMul <= 0F) {
-            return;
-        }
         AgingEntityUtil.addProgress((ServerWorld) world, ageableTarget, user.getUUID(),
-                speedMul / AgingEntityUtil.BASE_TICKS_PER_ENTITY);
+                1.0F / AgingEntityUtil.BASE_TICKS_PER_ENTITY, AgingApplyMode.CONTACT);
     }
 
     private static LivingEntity getAgeableLivingTarget(LivingEntity target) {
@@ -193,22 +195,12 @@ public class TheGratefulDeadAgingTouchAction extends StandAction {
     }
 
     private static void ageDroppedItemTarget(World world, LivingEntity user, ItemEntity itemEntity) {
-        BlockPos pos = itemEntity.blockPosition();
-        float speedMul = AgingSpeedUtil.getTotalAgingSpeedMultiplier(world, pos);
-        if (speedMul <= 0F) {
-            return;
-        }
-        float delta = speedMul / AgingItemUtil.BASE_TICKS_PER_ITEM;
+        float delta = 1.0F / AgingItemUtil.BASE_TICKS_PER_ITEM;
         AgingItemUtil.addProgress((ServerWorld) world, itemEntity, user.getUUID(), delta);
     }
 
     private static boolean ageOwnHeldItemTarget(World world, LivingEntity user) {
-        BlockPos pos = user.blockPosition();
-        float speedMul = AgingSpeedUtil.getTotalAgingSpeedMultiplier(world, pos);
-        if (speedMul <= 0F) {
-            return hasAgeableHeldItem(user);
-        }
-        float delta = speedMul / AgingItemUtil.BASE_TICKS_PER_ITEM;
+        float delta = 1.0F / AgingItemUtil.BASE_TICKS_PER_ITEM;
         if (AgingItemUtil.isAgeableLivingItem(user.getMainHandItem())) {
             AgingItemUtil.addProgress((ServerWorld) world, user, Hand.MAIN_HAND, user.getUUID(), delta);
             return true;
@@ -223,18 +215,6 @@ public class TheGratefulDeadAgingTouchAction extends StandAction {
     private static boolean hasAgeableHeldItem(LivingEntity living) {
         return AgingItemUtil.isAgeableLivingItem(living.getMainHandItem())
                 || AgingItemUtil.isAgeableLivingItem(living.getOffhandItem());
-    }
-
-    private static BlockPos getConditionCheckPos(LivingEntity user, ActionTarget target) {
-        if (target != null) {
-            if (target.getType() == TargetType.BLOCK) {
-                return target.getBlockPos();
-            }
-            if (target.getType() == TargetType.ENTITY && target.getEntity() != null) {
-                return target.getEntity().blockPosition();
-            }
-        }
-        return user.blockPosition();
     }
 
     @Override

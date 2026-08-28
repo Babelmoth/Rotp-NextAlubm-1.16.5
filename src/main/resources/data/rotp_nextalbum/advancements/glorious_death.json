@@ -1,0 +1,23 @@
+{
+  "parent": "jojo:jojo/summon_stand",
+  "display": {
+    "icon": {
+      "item": "rotp_nextalbum:prosciutto_suit_cloth"
+    },
+    "title": {
+      "translate": "advancements.rotp_nextalbum.glorious_death.title"
+    },
+    "description": {
+      "translate": "advancements.rotp_nextalbum.glorious_death.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "glorious_death": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

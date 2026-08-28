@@ -37,10 +37,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.InterModComms;
-import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
 import net.minecraftforge.fml.network.NetworkRegistry;
 import net.minecraftforge.fml.network.simple.SimpleChannel;
 
@@ -49,14 +46,6 @@ import software.bernie.geckolib3.core.manager.AnimationData;
 import software.bernie.geckolib3.core.manager.AnimationFactory;
 import software.bernie.geckolib3.util.GeckoLibUtil;
 
-import top.theillusivec4.curios.api.CuriosApi;
-import top.theillusivec4.curios.api.SlotContext;
-import top.theillusivec4.curios.api.type.capability.ICurioItem;
-import top.theillusivec4.curios.api.SlotTypeMessage;
-import top.theillusivec4.curios.api.SlotTypePreset;
-import com.mojang.blaze3d.matrix.MatrixStack;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
-
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +53,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Mod.EventBusSubscriber(modid = NextAlubm.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
-public class AjaStoneNecklaceItem extends ArmorItem implements IAnimatable, ICurioItem {
+public class AjaStoneNecklaceItem extends ArmorItem implements IAnimatable {
 
     private static final String PROTOCOL_VERSION = "1";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
@@ -106,7 +95,15 @@ public class AjaStoneNecklaceItem extends ArmorItem implements IAnimatable, ICur
         if (entity.getItemBySlot(EquipmentSlotType.HEAD).getItem() == item) {
             return true;
         }
-        return CuriosApi.getCuriosHelper().findEquippedCurio(item, entity).isPresent();
+        return CuriosIntegration.hasCurioEquipped(entity, item);
+    }
+
+    public Object getClientRenderer() {
+        return renderer;
+    }
+
+    public void setClientRenderer(Object renderer) {
+        this.renderer = renderer;
     }
 
     @Override
@@ -263,56 +260,5 @@ public class AjaStoneNecklaceItem extends ArmorItem implements IAnimatable, ICur
         tooltip.add(new TranslationTextComponent("item.nextalbum.aja_stone_necklace.tooltips",
                 new KeybindTextComponent("key.sneak"),new KeybindTextComponent("key.mouse.right")).withStyle(TextFormatting.GRAY));
         ClientUtil.addItemReferenceQuote(tooltip, this);
-    }
-
-    @Override
-    public boolean canEquipFromUse(SlotContext slotContext, ItemStack stack) {
-        return true;
-    }
-
-    @Override
-    public boolean canRender(String identifier, int index, LivingEntity livingEntity, ItemStack stack) {
-        return true;
-    }
-
-    @Override
-    @OnlyIn(Dist.CLIENT)
-    public void render(String identifier, int index, MatrixStack matrixStack, IRenderTypeBuffer buffer, int light,
-                       LivingEntity entity, float limbSwing, float limbSwingAmount, float partialTicks,
-                       float ticks, float headYaw, float headPitch, ItemStack stack) {
-        if (entity.level.isClientSide) {
-            CurioRenderHelper.render(matrixStack, buffer, light, entity, limbSwing, limbSwingAmount, partialTicks, ticks, headYaw, headPitch, stack, this);
-        }
-    }
-
-    private static class CurioRenderHelper {
-        @OnlyIn(Dist.CLIENT)
-        public static void render(MatrixStack matrixStack, IRenderTypeBuffer buffer, int light, LivingEntity entity,
-                                  float limbSwing, float limbSwingAmount, float partialTicks, float ticks,
-                                  float headYaw, float headPitch, ItemStack stack, AjaStoneNecklaceItem item) {
-
-            if (!(item.renderer instanceof com.nextalubm.rotp_nextalbum.client.render.AjaStoneNecklaceRenderer)) {
-                item.renderer = new com.nextalubm.rotp_nextalbum.client.render.AjaStoneNecklaceRenderer();
-            }
-            com.nextalubm.rotp_nextalbum.client.render.AjaStoneNecklaceRenderer armorRenderer =
-                    (com.nextalubm.rotp_nextalbum.client.render.AjaStoneNecklaceRenderer) item.renderer;
-
-            armorRenderer.setCurrentItem(entity, stack, EquipmentSlotType.HEAD);
-
-            armorRenderer.young = entity.isBaby();
-            armorRenderer.riding = entity.isPassenger();
-            armorRenderer.crouching = entity.isCrouching();
-            armorRenderer.attackTime = entity.getAttackAnim(partialTicks);
-
-            armorRenderer.setupAnim(entity, limbSwing, limbSwingAmount, ticks, headYaw, headPitch);
-
-            net.minecraft.util.ResourceLocation texture = new net.minecraft.util.ResourceLocation(
-                    NextAlubm.MOD_ID, "textures/models/armor/aja_stone_necklace.png");
-            com.mojang.blaze3d.vertex.IVertexBuilder vertexBuilder =
-                    buffer.getBuffer(net.minecraft.client.renderer.RenderType.armorCutoutNoCull(texture));
-
-            armorRenderer.renderToBuffer(matrixStack, vertexBuilder, light,
-                    net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
-        }
     }
 }

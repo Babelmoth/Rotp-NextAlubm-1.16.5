@@ -6,6 +6,7 @@ import com.github.standobyte.jojo.client.particle.custom.FirstPersonHamonAura;
 import com.github.standobyte.jojo.entity.stand.StandEntity;
 import com.github.standobyte.jojo.init.ModStatusEffects;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
+import com.github.standobyte.jojo.power.impl.stand.IStandManifestation;
 import com.github.standobyte.jojo.power.impl.stand.type.StandType;
 import com.nextalubm.rotp_nextalbum.NextAlbumConfig;
 import com.nextalubm.rotp_nextalbum.NextAlubm;
@@ -50,11 +51,14 @@ public class ResolveAuraClientEvents {
 
         boolean auraForAll = NextAlbumConfig.getCommonConfig(true).resolveAuraForAllStands.get();
         boolean standAuraEnabled = NextAlbumConfig.getCommonConfig(true).standResolveAura.get();
+        boolean auraOnSummon = NextAlbumConfig.getCommonConfig(true).resolveAuraOnSummon.get();
 
         for (PlayerEntity player : world.players()) {
-            if (!player.isAlive() || !player.hasEffect(ModStatusEffects.RESOLVE.get())) {
+            if (!player.isAlive()) {
                 continue;
             }
+            boolean hasResolve = player.hasEffect(ModStatusEffects.RESOLVE.get());
+
             IStandPower.getStandPowerOptional(player).ifPresent(power -> {
                 if (!power.hasPower()) {
                     return;
@@ -64,7 +68,12 @@ public class ResolveAuraClientEvents {
                     return;
                 }
 
-                if (!auraForAll && !NextAlubm.MOD_ID.equals(standType.getRegistryName().getNamespace())) {
+                boolean isNextAlbumStand = NextAlubm.MOD_ID.equals(standType.getRegistryName().getNamespace());
+                boolean shouldShowFromResolve = hasResolve && (auraForAll || isNextAlbumStand);
+                boolean shouldShowFromSummon = auraOnSummon && (auraForAll || isNextAlbumStand)
+                        && isStandSummoned(power);
+
+                if (!shouldShowFromResolve && !shouldShowFromSummon) {
                     return;
                 }
 
@@ -73,7 +82,8 @@ public class ResolveAuraClientEvents {
                     color = standType.getColor();
                 }
 
-                spawnResolveAuraForEntity(world, player, color, sprites, 7);
+                int playerCount = shouldShowFromResolve ? 7 : 3;
+                spawnResolveAuraForEntity(world, player, color, sprites, playerCount);
                 if (player == mc.cameraEntity) {
                     spawnFirstPersonResolveAura(color, sprites);
                 }
@@ -85,6 +95,15 @@ public class ResolveAuraClientEvents {
         }
     }
 
+    private static boolean isStandSummoned(IStandPower power) {
+        IStandManifestation manifestation = power.getStandManifestation();
+        return manifestation instanceof StandEntity && ((StandEntity) manifestation).isAlive();
+    }
+
+    private static boolean isHiddenBoundStand(StandEntity stand) {
+        return stand.getBbWidth() <= 0.05F || stand.getBbHeight() <= 0.05F;
+    }
+
     private static void spawnAllStandsResolveAura(ClientWorld world, PlayerEntity user, int color, IAnimatedSprite sprites) {
         for (Entity entity : world.entitiesForRendering()) {
             if (!(entity instanceof StandEntity) || !entity.isAlive()) {
@@ -92,6 +111,9 @@ public class ResolveAuraClientEvents {
             }
             StandEntity stand = (StandEntity) entity;
             if (stand.getUser() != user) {
+                continue;
+            }
+            if (isHiddenBoundStand(stand)) {
                 continue;
             }
 
