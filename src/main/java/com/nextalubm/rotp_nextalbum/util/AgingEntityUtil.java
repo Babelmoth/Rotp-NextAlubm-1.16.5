@@ -537,7 +537,7 @@ public final class AgingEntityUtil {
             float saturation = foodStats.getSaturationLevel();
             float targetMax = MAX_AGED_SATURATION - hungerT * (MAX_AGED_SATURATION - MIN_AGED_SATURATION);
             if (saturation > targetMax) {
-                foodStats.setSaturation(Math.max(targetMax, saturation - (0.08F + hungerT * 0.10F)));
+                foodStats.saturationLevel = Math.max(targetMax, saturation - (0.08F + hungerT * 0.10F));
             }
         }
     }
